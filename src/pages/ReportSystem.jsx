@@ -42,6 +42,8 @@ export default function ReportSystem() {
       after_action: '', after_result: '',
       after_photos: [], // {dataUrl, caption}
       
+      custom_params: [],
+
       // Summary
       save_kwh: '', save_baht: '', invest: '', payback: '',
       conclusion: '', recommend: ''
@@ -130,6 +132,31 @@ export default function ReportSystem() {
     }));
   };
 
+  const addCustomParam = () => {
+    setReportForm(prev => ({
+      ...prev,
+      custom_params: [...(prev.custom_params || []), { label: '', beforeVal: '', afterVal: '' }]
+    }));
+  };
+
+  const removeCustomParam = (index) => {
+    setReportForm(prev => ({
+      ...prev,
+      custom_params: (prev.custom_params || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleCustomParamChange = (index, field, val) => {
+    setReportForm(prev => {
+      const nextList = [...(prev.custom_params || [])];
+      nextList[index] = { ...nextList[index], [field]: val };
+      return {
+        ...prev,
+        custom_params: nextList
+      };
+    });
+  };
+
   const saveReport = () => {
     const newReport = {
       ...reportForm,
@@ -165,7 +192,15 @@ export default function ReportSystem() {
   };
 
   const editReport = (rpt) => {
-    setReportForm(rpt);
+    const custom_params = rpt.custom_params || [
+      ...(rpt.before_p1label ? [{ label: rpt.before_p1label, beforeVal: rpt.before_p1val, afterVal: rpt.after_p1val }] : []),
+      ...(rpt.before_p2label ? [{ label: rpt.before_p2label, beforeVal: rpt.before_p2val, afterVal: rpt.after_p2val }] : []),
+      ...(rpt.before_p3label ? [{ label: rpt.before_p3label, beforeVal: rpt.before_p3val, afterVal: rpt.after_p3val }] : [])
+    ];
+    setReportForm({
+      ...rpt,
+      custom_params
+    });
     setStep(0);
     setView('editor');
   };
@@ -353,19 +388,46 @@ export default function ReportSystem() {
               <div><label className="block text-xs font-medium text-muted mb-1">ชั่วโมงทำงาน/ปี</label><input type="number" name="before_hrs" value={reportForm.before_hrs} onChange={handleInputChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent" /></div>
             </div>
             
-            <h4 className="text-xs font-bold mt-6 mb-3 border-b border-border pb-1">พารามิเตอร์อื่นๆ (เช่น COP, อุณหภูมิ, แรงดัน)</h4>
-            <div className="grid md:grid-cols-2 gap-x-4 gap-y-3">
-              <div className="flex gap-2">
-                <input type="text" name="before_p1label" value={reportForm.before_p1label} onChange={handleInputChange} placeholder="ชื่อพารามิเตอร์ 1" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm" />
-                <input type="text" name="before_p1val" value={reportForm.before_p1val} onChange={handleInputChange} placeholder="ค่าที่วัดได้" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm font-mono" />
+            <div className="mt-6">
+              <div className="flex justify-between items-center border-b border-border pb-2 mb-3">
+                <h4 className="text-xs font-bold text-text">พารามิเตอร์อื่นๆ (เช่น COP, อุณหภูมิ, แรงดัน)</h4>
+                <button 
+                  type="button" 
+                  onClick={addCustomParam}
+                  className="text-xs font-semibold text-accent hover:underline bg-transparent border-none cursor-pointer p-0"
+                >
+                  + เพิ่มพารามิเตอร์
+                </button>
               </div>
-              <div className="flex gap-2">
-                <input type="text" name="before_p2label" value={reportForm.before_p2label} onChange={handleInputChange} placeholder="ชื่อพารามิเตอร์ 2" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm" />
-                <input type="text" name="before_p2val" value={reportForm.before_p2val} onChange={handleInputChange} placeholder="ค่าที่วัดได้" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm font-mono" />
-              </div>
-              <div className="flex gap-2">
-                <input type="text" name="before_p3label" value={reportForm.before_p3label} onChange={handleInputChange} placeholder="ชื่อพารามิเตอร์ 3" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm" />
-                <input type="text" name="before_p3val" value={reportForm.before_p3val} onChange={handleInputChange} placeholder="ค่าที่วัดได้" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm font-mono" />
+              <div className="space-y-3">
+                {(reportForm.custom_params || []).map((p, idx) => (
+                  <div key={idx} className="flex gap-2 items-center animate-fade-in">
+                    <input 
+                      type="text" 
+                      placeholder="ชื่อพารามิเตอร์" 
+                      value={p.label} 
+                      onChange={(e) => handleCustomParamChange(idx, 'label', e.target.value)} 
+                      className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent" 
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="ค่าก่อนปรับปรุง" 
+                      value={p.beforeVal} 
+                      onChange={(e) => handleCustomParamChange(idx, 'beforeVal', e.target.value)} 
+                      className="w-5/12 p-2.5 bg-bg border border-border rounded-md text-sm font-mono outline-none focus:border-accent" 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => removeCustomParam(idx)} 
+                      className="w-1/12 p-2 bg-transparent text-red-500 hover:text-red-700 border-none cursor-pointer flex items-center justify-center"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+                {(!reportForm.custom_params || reportForm.custom_params.length === 0) && (
+                  <p className="text-xs text-muted italic text-center py-2">ไม่มีพารามิเตอร์อื่นๆ ที่บันทึกไว้</p>
+                )}
               </div>
             </div>
             
@@ -397,19 +459,29 @@ export default function ReportSystem() {
               <div><label className="block text-xs font-medium text-muted mb-1">ชั่วโมงทำงาน/ปี</label><input type="number" name="after_hrs" value={reportForm.after_hrs} onChange={handleInputChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent" /></div>
             </div>
             
-            <h4 className="text-xs font-bold mt-6 mb-3 border-b border-border pb-1">พารามิเตอร์อื่นๆ</h4>
-            <div className="grid md:grid-cols-2 gap-x-4 gap-y-3">
-              <div className="flex gap-2">
-                <input type="text" name="after_p1label" value={reportForm.after_p1label} onChange={handleInputChange} placeholder="ชื่อพารามิเตอร์ 1" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm" />
-                <input type="text" name="after_p1val" value={reportForm.after_p1val} onChange={handleInputChange} placeholder="ค่าที่วัดได้" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm font-mono" />
-              </div>
-              <div className="flex gap-2">
-                <input type="text" name="after_p2label" value={reportForm.after_p2label} onChange={handleInputChange} placeholder="ชื่อพารามิเตอร์ 2" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm" />
-                <input type="text" name="after_p2val" value={reportForm.after_p2val} onChange={handleInputChange} placeholder="ค่าที่วัดได้" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm font-mono" />
-              </div>
-              <div className="flex gap-2">
-                <input type="text" name="after_p3label" value={reportForm.after_p3label} onChange={handleInputChange} placeholder="ชื่อพารามิเตอร์ 3" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm" />
-                <input type="text" name="after_p3val" value={reportForm.after_p3val} onChange={handleInputChange} placeholder="ค่าที่วัดได้" className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm font-mono" />
+            <div className="mt-6">
+              <h4 className="text-xs font-bold border-b border-border pb-2 mb-3">พารามิเตอร์อื่นๆ (ค่าหลังปรับปรุง)</h4>
+              <div className="space-y-3">
+                {(reportForm.custom_params || []).map((p, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={p.label || 'พารามิเตอร์ไม่มีชื่อ'} 
+                      className="w-1/2 p-2.5 bg-slate-50 border border-border rounded-md text-sm text-muted outline-none cursor-not-allowed" 
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="ค่าหลังปรับปรุง" 
+                      value={p.afterVal} 
+                      onChange={(e) => handleCustomParamChange(idx, 'afterVal', e.target.value)} 
+                      className="w-1/2 p-2.5 bg-bg border border-border rounded-md text-sm font-mono outline-none focus:border-accent" 
+                    />
+                  </div>
+                ))}
+                {(!reportForm.custom_params || reportForm.custom_params.length === 0) && (
+                  <p className="text-xs text-muted italic text-center py-2">ไม่มีพารามิเตอร์อื่นๆ ที่ต้องกรอก</p>
+                )}
               </div>
             </div>
             
@@ -593,9 +665,17 @@ function ReportPreview({ rpt, onClose, onEdit }) {
           <tbody className="divide-y divide-slate-100">
             <tr><td className="p-2 text-slate-500">กำลังไฟฟ้าที่วัดได้ (kW)</td><td className="p-2 font-mono border-l border-slate-100">{rpt.before_kw || '-'}</td><td className="p-2 font-mono border-l border-slate-100">{rpt.after_kw || '-'}</td></tr>
             <tr><td className="p-2 text-slate-500">ชั่วโมงทำงาน (ชม./ปี)</td><td className="p-2 font-mono border-l border-slate-100">{rpt.before_hrs || '-'}</td><td className="p-2 font-mono border-l border-slate-100">{rpt.after_hrs || '-'}</td></tr>
-            {rpt.before_p1label && <tr><td className="p-2 text-slate-500">{rpt.before_p1label}</td><td className="p-2 font-mono border-l border-slate-100">{rpt.before_p1val || '-'}</td><td className="p-2 font-mono border-l border-slate-100">{rpt.after_p1val || '-'}</td></tr>}
-            {rpt.before_p2label && <tr><td className="p-2 text-slate-500">{rpt.before_p2label}</td><td className="p-2 font-mono border-l border-slate-100">{rpt.before_p2val || '-'}</td><td className="p-2 font-mono border-l border-slate-100">{rpt.after_p2val || '-'}</td></tr>}
-            {rpt.before_p3label && <tr><td className="p-2 text-slate-500">{rpt.before_p3label}</td><td className="p-2 font-mono border-l border-slate-100">{rpt.before_p3val || '-'}</td><td className="p-2 font-mono border-l border-slate-100">{rpt.after_p3val || '-'}</td></tr>}
+            {(rpt.custom_params || [
+              ...(rpt.before_p1label ? [{ label: rpt.before_p1label, beforeVal: rpt.before_p1val, afterVal: rpt.after_p1val }] : []),
+              ...(rpt.before_p2label ? [{ label: rpt.before_p2label, beforeVal: rpt.before_p2val, afterVal: rpt.after_p2val }] : []),
+              ...(rpt.before_p3label ? [{ label: rpt.before_p3label, beforeVal: rpt.before_p3val, afterVal: rpt.after_p3val }] : [])
+            ]).map((p, idx) => (
+              <tr key={idx}>
+                <td className="p-2 text-slate-500">{p.label || 'พารามิเตอร์'}</td>
+                <td className="p-2 font-mono border-l border-slate-100">{p.beforeVal || '-'}</td>
+                <td className="p-2 font-mono border-l border-slate-100">{p.afterVal || '-'}</td>
+              </tr>
+            ))}
             <tr>
               <td className="p-2 text-slate-500 align-top">หมายเหตุ / สภาพ</td>
               <td className="p-2 text-slate-700 border-l border-slate-100 whitespace-pre-wrap">{rpt.before_issue || '-'}</td>

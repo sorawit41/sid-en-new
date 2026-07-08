@@ -56,7 +56,7 @@ export default function Results({ res }) {
   }
 
   const {
-    T_CHWS, T_CHWR, Q_CHW, T_CWS, T_CWR, Q_CW, P_in,
+    coolingType, T_CHWS, T_CHWR, Q_CHW, T_CWS, T_CWR, Q_CW, P_in, tdb,
     Q_cool_kW, Q_rej_kW, TR, COP, EER, kWperTR,
     heatBalance, iplv, COP_carnot, eta_carnot,
     copPct, lbl, advTxt,
@@ -202,18 +202,32 @@ export default function Results({ res }) {
           <table className="w-full border-collapse text-[13px]">
             <tbody>
               <tr><td className="py-2 px-2.5 border-b border-border text-muted">สารทำความเย็น</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{inputs.refrigerant}</td></tr>
-              <tr><td className="py-2 px-2.5 border-b border-border text-muted">T_CHWS / T_CHWR</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{T_CHWS}°C / {T_CHWR}°C</td></tr>
-              <tr><td className="py-2 px-2.5 border-b border-border text-muted">T_CWS / T_CWR</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{T_CWS}°C / {T_CWR}°C</td></tr>
-              <tr><td className="py-2 px-2.5 border-b border-border text-muted">ΔT Chilled Water</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{(T_CHWR - T_CHWS).toFixed(1)} K</td></tr>
-              <tr><td className="py-2 px-2.5 border-b border-border text-muted">ΔT Condenser Water</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{(T_CWR - T_CWS).toFixed(1)} K</td></tr>
-              <tr><td className="py-2 px-2.5 border-b border-border text-muted">อัตราการไหล CHW</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{Q_CHW} L/s</td></tr>
-              <tr><td className="py-2 px-2.5 border-b border-border text-muted">อัตราการไหล CW</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{Q_CW} L/s</td></tr>
+              <tr><td className="py-2 px-2.5 border-b border-border text-muted">T_CHWS / T_CHWR</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{T_CHWS}°F / {T_CHWR}°F</td></tr>
+              {coolingType !== 'air' ? (
+                <>
+                  <tr><td className="py-2 px-2.5 border-b border-border text-muted">T_CWS / T_CWR</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{T_CWS}°F / {T_CWR}°F</td></tr>
+                  <tr><td className="py-2 px-2.5 border-b border-border text-muted">ΔT Chilled Water</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{(T_CHWR - T_CHWS).toFixed(1)} °F</td></tr>
+                  <tr><td className="py-2 px-2.5 border-b border-border text-muted">ΔT Condenser Water</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{(T_CWR - T_CWS).toFixed(1)} °F</td></tr>
+                  <tr><td className="py-2 px-2.5 border-b border-border text-muted">อัตราการไหล CHW</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{Q_CHW} L/s</td></tr>
+                  <tr><td className="py-2 px-2.5 border-b border-border text-muted">อัตราการไหล CW</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{Q_CW} L/s</td></tr>
+                </>
+              ) : (
+                <>
+                  <tr><td className="py-2 px-2.5 border-b border-border text-muted">อุณหภูมิอากาศ T_DB</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{tdb}°F</td></tr>
+                  <tr><td className="py-2 px-2.5 border-b border-border text-muted">ΔT Chilled Water</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{(T_CHWR - T_CHWS).toFixed(1)} °F</td></tr>
+                  <tr><td className="py-2 px-2.5 border-b border-border text-muted">อัตราการไหล CHW</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{Q_CHW} L/s</td></tr>
+                </>
+              )}
               <tr><td className="py-2 px-2.5 border-b border-border text-muted">P_input</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{P_in} kW</td></tr>
               <tr><td className="py-2 px-2.5 border-b border-border text-muted">COP_Carnot (ideal)</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{COP_carnot.toFixed(3)}</td></tr>
-              <tr><td className="py-2 px-2.5 border-b border-border text-muted">T_evap (approx)</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{(T_CHWS - 5).toFixed(1)} °C</td></tr>
-              <tr><td className="py-2 px-2.5 border-b border-border text-muted">T_cond (approx)</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{(T_CWR + 5).toFixed(1)} °C</td></tr>
-              <tr><td className="py-2 px-2.5 border-b border-border text-muted border-none">Heat Balance Error</td><td className="py-2 px-2.5 border-b border-border font-mono text-right border-none" style={{ color: Math.abs(heatBalance) < 5 ? 'var(--good)' : 'var(--mid)' }}>{heatBalance.toFixed(2)} %</td></tr>
-              {iplv !== null && (
+              <tr><td className="py-2 px-2.5 border-b border-border text-muted">T_evap (approx)</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{(T_CHWS - 9).toFixed(1)} °F</td></tr>
+              <tr><td className="py-2 px-2.5 border-b border-border text-muted">T_cond (approx)</td><td className="py-2 px-2.5 border-b border-border font-mono text-right">{(coolingType !== 'air' ? T_CWR + 9 : tdb + 27).toFixed(1)} °F</td></tr>
+              {coolingType !== 'air' ? (
+                <tr><td className="py-2 px-2.5 border-b border-border text-muted border-none">Heat Balance Error</td><td className="py-2 px-2.5 border-b border-border font-mono text-right border-none" style={{ color: Math.abs(heatBalance) < 5 ? 'var(--good)' : 'var(--mid)' }}>{heatBalance.toFixed(2)} %</td></tr>
+              ) : (
+                <tr><td className="py-2 px-2.5 border-b border-border text-muted border-none">Heat Balance Error</td><td className="py-2 px-2.5 border-b border-border font-mono text-right border-none" style={{ color: 'var(--good)' }}>N/A (Air Cooled)</td></tr>
+              )}
+              {iplv !== null && iplv !== undefined && (
                 <tr><td className="py-2 px-2.5 border-t border-border text-muted">IPLV (AHRI)</td><td className="py-2 px-2.5 border-t border-border font-mono text-right" style={{ color: effColor(iplv, true) }}>{iplv.toFixed(2)} COP</td></tr>
               )}
             </tbody>

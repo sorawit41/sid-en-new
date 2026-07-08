@@ -89,53 +89,75 @@ export function EquipmentInfo({ data, onChange }) {
 }
 
 export function WaterSide({ data, onChange }) {
+  const isAirCooled = data.coolingType === 'air';
+
   return (
     <div className="card" style={{ animationDelay: '.15s' }}>
       <div className="ctitle">💧 ฝั่ง Chilled Water (CHW)</div>
       <div className="grid grid-cols-2 gap-3">
         <div className="field">
-          <label>อุณหภูมิน้ำเย็นออก T_CHWS<span className="hint">°C</span></label>
-          <input type="number" name="tchws" value={data.tchws} onChange={onChange} className="input-base input-mono" step=".1" />
+          <label>อุณหภูมิน้ำเย็นออก T_CHWS<span className="hint">°F</span></label>
+          <input type="number" name="tchws" value={data.tchws || ''} onChange={onChange} className="input-base input-mono" step=".1" />
         </div>
         <div className="field">
-          <label>อุณหภูมิน้ำเย็นกลับ T_CHWR<span className="hint">°C</span></label>
-          <input type="number" name="tchwr" value={data.tchwr} onChange={onChange} className="input-base input-mono" step=".1" />
+          <label>อุณหภูมิน้ำเย็นกลับ T_CHWR<span className="hint">°F</span></label>
+          <input type="number" name="tchwr" value={data.tchwr || ''} onChange={onChange} className="input-base input-mono" step=".1" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="field">
           <label>อัตราการไหล CHW<span className="hint">L/s</span></label>
-          <input type="number" name="qchw" value={data.qchw} onChange={onChange} className="input-base input-mono" step=".1" min="0" />
+          <input type="number" name="qchw" value={data.qchw || ''} onChange={onChange} className="input-base input-mono" step=".1" min="0" />
         </div>
         <div className="field">
           <label>ความจุความร้อนจำเพาะ Cp<span className="hint">kJ/kg·K</span></label>
-          <input type="number" name="cpWater" value={data.cpWater} onChange={onChange} className="input-base input-mono" step=".001" />
+          <input type="number" name="cpWater" value={data.cpWater || ''} onChange={onChange} className="input-base input-mono" step=".001" />
         </div>
       </div>
       <div className="field">
         <label>ความหนาแน่นน้ำ ρ<span className="hint">kg/L</span></label>
-        <input type="number" name="rhoWater" value={data.rhoWater} onChange={onChange} className="input-base input-mono" step=".001" />
+        <input type="number" name="rhoWater" value={data.rhoWater || ''} onChange={onChange} className="input-base input-mono" step=".001" />
       </div>
       
       <div className="divider"></div>
       
-      <div className="ctitle mb-3">🌡 ฝั่ง Condenser Water (CW)</div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="field">
-          <label>อุณหภูมิน้ำระบายความร้อนเข้า T_CWS<span className="hint">°C</span></label>
-          <input type="number" name="tcws" value={data.tcws} onChange={onChange} className="input-base input-mono" step=".1" />
-        </div>
-        <div className="field">
-          <label>อุณหภูมิน้ำระบายความร้อนออก T_CWR<span className="hint">°C</span></label>
-          <input type="number" name="tcwr" value={data.tcwr} onChange={onChange} className="input-base input-mono" step=".1" />
-        </div>
+      <div className="field">
+        <label>ระบบระบายความร้อน</label>
+        <select name="coolingType" value={data.coolingType || 'water'} onChange={onChange} className="input-base font-mono text-sm">
+          <option value="water">ระบายความร้อนด้วยน้ำ (Water Cooled)</option>
+          <option value="air">ระบายความร้อนด้วยอากาศ (Air Cooled)</option>
+        </select>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="field">
-          <label>อัตราการไหล CW<span className="hint">L/s</span></label>
-          <input type="number" name="qcw" value={data.qcw} onChange={onChange} className="input-base input-mono" step=".1" min="0" />
-        </div>
-      </div>
+
+      {!isAirCooled ? (
+        <>
+          <div className="ctitle mb-3">🌡 ฝั่ง Condenser Water (CW)</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="field">
+              <label>อุณหภูมิน้ำระบายความร้อนเข้า T_CWS<span className="hint">°F</span></label>
+              <input type="number" name="tcws" value={data.tcws || ''} onChange={onChange} className="input-base input-mono" step=".1" />
+            </div>
+            <div className="field">
+              <label>อุณหภูมิน้ำระบายความร้อนออก T_CWR<span className="hint">°F</span></label>
+              <input type="number" name="tcwr" value={data.tcwr || ''} onChange={onChange} className="input-base input-mono" step=".1" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="field">
+              <label>อัตราการไหล CW<span className="hint">L/s</span></label>
+              <input type="number" name="qcw" value={data.qcw || ''} onChange={onChange} className="input-base input-mono" step=".1" min="0" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="ctitle mb-3">🌡 อุณหภูมิอากาศ (Dry Bulb)</div>
+          <div className="field">
+            <label>อุณหภูมิอากาศเข้า T_DB<span className="hint">°F</span></label>
+            <input type="number" name="tdb" value={data.tdb || ''} onChange={onChange} className="input-base input-mono" step=".1" />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -146,16 +168,16 @@ export function PowerOptions({ data, onChange, onCalculate, onReset }) {
       <div className="ctitle">⚡ กำลังไฟฟ้าและตัวเลือก</div>
       <div className="field">
         <label>กำลังไฟฟ้าที่วัดได้ P_input<span className="hint">kW</span></label>
-        <input type="number" name="pInput" value={data.pInput} onChange={onChange} className="input-base input-mono" step=".5" min="0" />
+        <input type="number" name="pInput" value={data.pInput || ''} onChange={onChange} className="input-base input-mono" step=".5" min="0" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="field">
           <label>โหลดปัจจุบัน<span className="hint">%</span></label>
-          <input type="number" name="loadPct" value={data.loadPct} onChange={onChange} className="input-base input-mono" min="1" max="100" step="1" />
+          <input type="number" name="loadPct" value={data.loadPct || ''} onChange={onChange} className="input-base input-mono" min="1" max="100" step="1" />
         </div>
         <div className="field">
           <label>สารทำความเย็น</label>
-          <select name="refrigerant" value={data.refrigerant} onChange={onChange} className="input-base font-mono text-sm">
+          <select name="refrigerant" value={data.refrigerant || ''} onChange={onChange} className="input-base font-mono text-sm">
             <option>R-134a</option>
             <option>R-123</option>
             <option>R-410A</option>
@@ -166,32 +188,8 @@ export function PowerOptions({ data, onChange, onCalculate, onReset }) {
           </select>
         </div>
       </div>
-
-      <div className="divider"></div>
-      <div className="ctitle mb-3">📐 IPLV / NPLV (ทดสอบ 4 จุดโหลด)</div>
-      <p className="text-[11px] text-muted mb-2.5 leading-[1.6]">กรอก kW/TR ที่แต่ละ % โหลด (AHRI 550/590) — ไม่บังคับ</p>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="field">
-          <label>100% Load<span className="hint">kW/TR</span></label>
-          <input type="number" name="i100" value={data.i100} onChange={onChange} className="input-base input-mono" placeholder="—" step=".01" min="0" />
-        </div>
-        <div className="field">
-          <label>75% Load<span className="hint">kW/TR</span></label>
-          <input type="number" name="i75" value={data.i75} onChange={onChange} className="input-base input-mono" placeholder="—" step=".01" min="0" />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="field">
-          <label>50% Load<span className="hint">kW/TR</span></label>
-          <input type="number" name="i50" value={data.i50} onChange={onChange} className="input-base input-mono" placeholder="—" step=".01" min="0" />
-        </div>
-        <div className="field">
-          <label>25% Load<span className="hint">kW/TR</span></label>
-          <input type="number" name="i25" value={data.i25} onChange={onChange} className="input-base input-mono" placeholder="—" step=".01" min="0" />
-        </div>
-      </div>
       
-      <div className="grid grid-cols-2 gap-2.5 mt-1.5">
+      <div className="grid grid-cols-2 gap-2.5 mt-4">
         <button className="col-span-2 bg-gradient-to-br from-accent to-[#007aaa] border-none rounded-[11px] p-[13px] text-[#001e35] font-sans text-[15px] font-bold cursor-pointer transition-all duration-200 hover:opacity-90 active:scale-95" onClick={onCalculate}>
           ❄ คำนวณ
         </button>

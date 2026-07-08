@@ -32,19 +32,20 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
   
   // Step 1: Input State
   const [params, setParams] = useState({
-    tchws: 7, tchwr: 12, qchw: 30, cpWater: 4.187, rhoWater: 1.0,
-    tcws: 30, tcwr: 35, qcw: 38,
-    pInput: 280, loadPct: 100, refrigerant: 'R-134a',
-    i100: '', i75: '', i50: '', i25: ''
+    coolingType: 'water',
+    tchws: 45.6, tchwr: 54, chwFlowGPM: 2400, cpWater: 4.187, rhoWater: 1.0,
+    tcws: 84.1, tcwr: 90.6, qcw: 38,
+    tdb: 84.1,
+    pInput: 657.84, loadPct: 70, refrigerant: 'R-134a',
+    opHoursPerDay: 10, opDaysPerYear: 250, elecRate: 4.65
   });
 
   // Step 2-4: Measure State
   const [selectedMeasure, setSelectedMeasure] = useState(null);
   const [measureData, setMeasureData] = useState({
-    pctReduction: 10,
-    opHours: 8000,
-    elecRate: 4.50,
-    investCost: 0,
+    pctReduction: 20,
+    targetKwTr: 0.55,
+    investCost: 5130000,
     remark: ''
   });
 
@@ -68,44 +69,67 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
   };
 
   const calculate = () => {
-    const T_CHWS = params.tchws; const T_CHWR = params.tchwr;
-    const Q_CHW  = params.qchw; const Cp = params.cpWater; const rho = params.rhoWater;
-    const T_CWS  = params.tcws; const T_CWR  = params.tcwr;
-    const Q_CW   = params.qcw;
+    const T_CHWS_F = params.tchws;
+    const T_CHWR_F = params.tchwr;
+    const chwFlowGPM = params.chwFlowGPM;
+    const Cp = params.cpWater;
+    const rho = params.rhoWater;
     const P_in   = params.pInput;
     
-    if (T_CHWR <= T_CHWS) return alert(lang === 'th' ? 'T_CHWR ต้องมากกว่า T_CHWS' : 'T_CHWR must be greater than T_CHWS');
-    if (T_CWR  <= T_CWS)  return alert(lang === 'th' ? 'T_CWR ต้องมากกว่า T_CWS' : 'T_CWR must be greater than T_CWS');
+    if (T_CHWR_F <= T_CHWS_F) return alert(lang === 'th' ? 'T_CHWR ต้องมากกว่า T_CHWS' : 'T_CHWR must be greater than T_CHWS');
     if (P_in   <= 0)      return alert(lang === 'th' ? 'กำลังไฟฟ้า P_input ต้องมากกว่า 0' : 'Power input P_input must be greater than 0');
 
-    const mdot_chw = Q_CHW * rho;
-    const Q_cool_kW = mdot_chw * Cp * (T_CHWR - T_CHWS);
-    
-    const mdot_cw  = Q_CW * rho;
-    const Q_rej_kW = mdot_cw * Cp * (T_CWR - T_CWS);
-
-    const TR = Q_cool_kW / 3.517;
+    // Calculate TR using Excel formula: TR = GPM * deltaT / 24
+    const TR = (chwFlowGPM * (T_CHWR_F - T_CHWS_F)) / 24;
+    const kWperTR = P_in / TR;
+    const Q_cool_kW = TR * 3.517;
     const COP = Q_cool_kW / P_in;
     const EER = COP * 3.412;
-    const kWperTR = P_in / TR;
 
-    const heatBalance = ((Q_rej_kW - (Q_cool_kW + P_in)) / Q_rej_kW) * 100;
+    const T_CHWS = (T_CHWS_F - 32) * 5 / 9;
+    const T_CHWR = (T_CHWR_F - 32) * 5 / 9;
 
-    const i100v = parseFloat(params.i100); const i75v = parseFloat(params.i75);
-    const i50v  = parseFloat(params.i50);  const i25v = parseFloat(params.i25);
-    let iplv = null;
-    if (i100v && i75v && i50v && i25v) {
-      const a = 3.517/i100v, b = 3.517/i75v, c = 3.517/i50v, d = 3.517/i25v;
-      iplv = 1 / (0.01/a + 0.42/b + 0.45/c + 0.12/d);
+    let Q_rej_kW = 0;
+    let heatBalance = 0;
+    let T_cond = 0;
+
+    if (params.coolingType === 'water') {
+      const T_CWS_F = params.tcws;
+      const T_CWR_F = params.tcwr;
+      if (T_CWR_F <= T_CWS_F) return alert(lang === 'th' ? 'T_CWR ต้องมากกว่า T_CWS' : 'T_CWR must be greater than T_CWS');
+      
+      const T_CWS = (T_CWS_F - 32) * 5 / 9;
+      const T_CWR = (T_CWR_F - 32) * 5 / 9;
+      const Q_CW   = params.qcw;
+      const mdot_cw  = Q_CW * rho;
+      Q_rej_kW = mdot_cw * Cp * (T_CWR - T_CWS);
+      heatBalance = ((Q_rej_kW - (Q_cool_kW + P_in)) / Q_rej_kW) * 100;
+      T_cond = T_CWR + 5;
+    } else {
+      // Air Cooled
+      const T_DB_F = params.tdb;
+      const T_DB = (T_DB_F - 32) * 5 / 9;
+      Q_rej_kW = Q_cool_kW + P_in;
+      heatBalance = 0;
+      T_cond = T_DB + 15; // Approximated Condensation Temperature is Dry Bulb + 15°C
     }
 
-    const T_evap = T_CHWS + 273.15 - 5;
-    const T_cond = T_CWR  + 273.15 + 5;
-    const COP_carnot = T_evap / (T_cond - T_evap);
+    const T_evap = T_CHWS - 5;
+    const T_evap_K = T_evap + 273.15;
+    const T_cond_K = T_cond + 273.15;
+    const COP_carnot = T_evap_K / (T_cond_K - T_evap_K);
     const eta_carnot = (COP / COP_carnot) * 100;
 
     setCalcResult({
-      Q_cool_kW, Q_rej_kW, TR, COP, EER, kWperTR, heatBalance, iplv, eta_carnot, P_in
+      coolingType: params.coolingType,
+      tchws: T_CHWS_F,
+      tchwr: T_CHWR_F,
+      chwFlowGPM,
+      tcws: params.tcws,
+      tcwr: params.tcwr,
+      qcw: params.qcw,
+      tdb: params.tdb,
+      Q_cool_kW, Q_rej_kW, TR, COP, EER, kWperTR, heatBalance, iplv: null, eta_carnot, P_in
     });
     setStep(2);
   };
@@ -114,8 +138,18 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
     if (!calcResult || !selectedMeasure) return;
     
     const pInput = calcResult.P_in;
-    const kWhSave = pInput * (measureData.pctReduction / 100) * measureData.opHours;
-    const bahtSave = kWhSave * measureData.elecRate;
+    const annualHours = params.opHoursPerDay * params.opDaysPerYear;
+    const loadFactor = params.loadPct / 100;
+    
+    const energyBefore = pInput * loadFactor * annualHours;
+    let pctRed = measureData.pctReduction;
+    
+    if (selectedMeasure.id === 'replace_chiller' && measureData.targetKwTr) {
+       pctRed = ((calcResult.kWperTR - measureData.targetKwTr) / calcResult.kWperTR) * 100;
+    }
+
+    const kWhSave = energyBefore * (pctRed / 100);
+    const bahtSave = kWhSave * params.elecRate;
     const payback = measureData.investCost > 0 && bahtSave > 0 ? (measureData.investCost / bahtSave) : null;
 
     const newMeasure = {
@@ -126,8 +160,8 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
       factory: equipment?.factory,
       date: new Date().toISOString(),
       measName: lang === 'th' ? selectedMeasure.name : selectedMeasure.nameEn,
-      pct: measureData.pctReduction,
-      opHours: measureData.opHours,
+      pct: parseFloat(pctRed.toFixed(2)),
+      opHours: annualHours,
       kWhYear: kWhSave,
       bahtYear: bahtSave,
       invest: measureData.investCost,
@@ -154,8 +188,7 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
     const newKwTr = model.kw_tr;
     
     if (currentKwTr > newKwTr) {
-      const reduction = ((currentKwTr - newKwTr) / currentKwTr) * 100;
-      setMeasureData(p => ({ ...p, pctReduction: parseFloat(reduction.toFixed(1)) }));
+      setMeasureData(p => ({ ...p, targetKwTr: newKwTr }));
     } else {
       alert(lang === 'th' 
         ? `รุ่นที่แนะนำ (${newKwTr} kW/TR) ไม่มีประสิทธิภาพมากกว่าระดับการทำงานปัจจุบัน (${currentKwTr.toFixed(2)} kW/TR)`
@@ -194,59 +227,88 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               <div className="space-y-4">
-                <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2">{t('chiller_water')}</h4>
+                <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2">Operation Data</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-muted mb-1">T_CHWS (°C)</label>
+                    <label className="block text-xs font-medium text-muted mb-1">Time/day (hr/day)</label>
+                    <input type="number" name="opHoursPerDay" value={params.opHoursPerDay} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Day/Year (day/yr)</label>
+                    <input type="number" name="opDaysPerYear" value={params.opDaysPerYear} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">% Load</label>
+                    <input type="number" name="loadPct" value={params.loadPct} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Electricity Cost (Baht/kWh)</label>
+                    <input type="number" name="elecRate" value={params.elecRate} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                  </div>
+                </div>
+
+                <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 pt-4">Measurement (Chilled Water)</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">T_CHWS (°F)</label>
                     <input type="number" name="tchws" value={params.tchws} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-muted mb-1">T_CHWR (°C)</label>
+                    <label className="block text-xs font-medium text-muted mb-1">T_CHWR (°F)</label>
                     <input type="number" name="tchwr" value={params.tchwr} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">Flow CHW (L/s)</label>
-                    <input type="number" name="qchw" value={params.qchw} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-muted mb-1">Flow CHW (GPM)</label>
+                    <input type="number" name="chwFlowGPM" value={params.chwFlowGPM} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
                   </div>
                 </div>
 
-                <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 pt-4">{t('water_properties')}</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">Cp (kJ/kg.K)</label>
-                    <input type="number" name="cpWater" value={params.cpWater} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">Density (kg/L)</label>
-                    <input type="number" name="rhoWater" value={params.rhoWater} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                  </div>
-                </div>
-
-                <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 pt-4">{t('condenser_water')}</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">T_CWS (°C)</label>
-                    <input type="number" name="tcws" value={params.tcws} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">T_CWR (°C)</label>
-                    <input type="number" name="tcwr" value={params.tcwr} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">Flow CW (L/s)</label>
-                    <input type="number" name="qcw" value={params.qcw} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                  </div>
-                </div>
+                {params.coolingType === 'water' ? (
+                  <>
+                    <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 pt-4">{t('condenser_water')}</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-muted mb-1">T_CWS (°F)</label>
+                        <input type="number" name="tcws" value={params.tcws} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-muted mb-1">T_CWR (°F)</label>
+                        <input type="number" name="tcwr" value={params.tcwr} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-muted mb-1">Flow CW (L/s)</label>
+                        <input type="number" name="qcw" value={params.qcw} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 pt-4">{t('dry_bulb_temp')}</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-muted mb-1">T_DB (°F)</label>
+                        <input type="number" name="tdb" value={params.tdb} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="space-y-4">
                 <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2">{t('power_load')}</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-muted mb-1">P_input (kW)</label>
-                    <input type="number" name="pInput" value={params.pInput} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                    <label className="block text-xs font-medium text-muted mb-1">{t('cooling_type')}</label>
+                    <select name="coolingType" value={params.coolingType} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent">
+                      <option value="water">{t('water_cooled')}</option>
+                      <option value="air">{t('air_cooled')}</option>
+                    </select>
                   </div>
                   <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Power Input (kW)</label>
+                    <input type="number" name="pInput" value={params.pInput} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
+                  </div>
+                  <div className="col-span-2">
                     <label className="block text-xs font-medium text-muted mb-1">Refrigerant</label>
                     <select name="refrigerant" value={params.refrigerant} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent">
                       <option value="R-134a">R-134a</option>
@@ -254,30 +316,6 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
                       <option value="R-410A">R-410A</option>
                       <option value="R-32">R-32</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">Current Load (%)</label>
-                    <input type="number" name="loadPct" value={params.loadPct} onChange={handleChange} className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                  </div>
-                </div>
-
-                <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 pt-4">{t('iplv_nplv')}</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">100% Load</label>
-                    <input type="number" name="i100" value={params.i100} onChange={handleChange} placeholder="-" className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">75% Load</label>
-                    <input type="number" name="i75" value={params.i75} onChange={handleChange} placeholder="-" className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">50% Load</label>
-                    <input type="number" name="i50" value={params.i50} onChange={handleChange} placeholder="-" className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted mb-1">25% Load</label>
-                    <input type="number" name="i25" value={params.i25} onChange={handleChange} placeholder="-" className="w-full p-2 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
                   </div>
                 </div>
               </div>
@@ -399,46 +437,60 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
             )}
 
             <div className="grid grid-cols-2 gap-4">
+              {selectedMeasure?.id === 'replace_chiller' ? (
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1">Target Efficiency (kW/TR)</label>
+                  <input type="number" name="targetKwTr" value={measureData.targetKwTr} onChange={handleMeasureDataChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent bg-yellow-50 font-bold text-emerald-700" />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-muted mb-1">{t('energy_reduction')} (%)</label>
+                  <input type="number" name="pctReduction" value={measureData.pctReduction} onChange={handleMeasureDataChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent" />
+                </div>
+              )}
               <div>
-                <label className="block text-xs font-medium text-muted mb-1">{t('energy_reduction')}</label>
-                <input type="number" name="pctReduction" value={measureData.pctReduction} onChange={handleMeasureDataChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted mb-1">{t('operating_hours')}</label>
-                <input type="number" name="opHours" value={measureData.opHours} onChange={handleMeasureDataChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted mb-1">{t('electricity_rate')}</label>
-                <input type="number" name="elecRate" value={measureData.elecRate} onChange={handleMeasureDataChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted mb-1">{t('investment_cost')}</label>
-                <input type="number" name="investCost" value={measureData.investCost} onChange={handleMeasureDataChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent" />
+                <label className="block text-xs font-medium text-muted mb-1">{t('investment_cost')} (Baht)</label>
+                <input type="number" name="investCost" value={measureData.investCost} onChange={handleMeasureDataChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent bg-yellow-50 font-bold" />
               </div>
             </div>
 
-            {calcResult && (
-              <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-xl mt-4 flex flex-wrap justify-between items-center gap-4">
-                <div>
-                  <div className="text-xs text-emerald-800 uppercase tracking-wide font-medium mb-1">{t('estimated_savings')}</div>
-                  <div className="text-2xl font-bold text-emerald-600 font-mono">
-                    {((calcResult.P_in * (measureData.pctReduction/100) * measureData.opHours) || 0).toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-sm text-emerald-700/80 font-sans">{t('kwh_yr')}</span>
+            {calcResult && (() => {
+              const annualHours = params.opHoursPerDay * params.opDaysPerYear;
+              const loadFactor = params.loadPct / 100;
+              const energyBefore = calcResult.P_in * loadFactor * annualHours;
+              
+              let pctRed = measureData.pctReduction;
+              if (selectedMeasure?.id === 'replace_chiller' && measureData.targetKwTr) {
+                pctRed = ((calcResult.kWperTR - measureData.targetKwTr) / calcResult.kWperTR) * 100;
+              }
+              
+              const kWhSave = energyBefore * (pctRed / 100);
+              const bahtSave = kWhSave * params.elecRate;
+              const ghgSave = (kWhSave * 0.4999) / 1000;
+              
+              return (
+                <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-xl mt-4 flex flex-wrap justify-between items-center gap-4">
+                  <div>
+                    <div className="text-xs text-emerald-800 uppercase tracking-wide font-medium mb-1">{t('estimated_savings')}</div>
+                    <div className="text-2xl font-bold text-emerald-600 font-mono">
+                      {(kWhSave || 0).toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-sm text-emerald-700/80 font-sans">{t('kwh_yr')}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-emerald-800 uppercase tracking-wide font-medium mb-1">{t('carbon_reduction')}</div>
+                    <div className="text-2xl font-bold text-emerald-600 font-mono">
+                      {(ghgSave || 0).toLocaleString(undefined, {maximumFractionDigits:1})} <span className="text-sm text-emerald-700/80 font-sans">tCO₂e/yr</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-emerald-800 uppercase tracking-wide font-medium mb-1">{t('cost_savings')}</div>
+                    <div className="text-2xl font-bold text-emerald-600 font-mono">
+                      {(bahtSave || 0).toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-sm text-emerald-700/80 font-sans">{t('thb_yr')}</span>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-emerald-800 uppercase tracking-wide font-medium mb-1">{t('carbon_reduction')}</div>
-                  <div className="text-2xl font-bold text-emerald-600 font-mono">
-                    {(((calcResult.P_in * (measureData.pctReduction/100) * measureData.opHours) * 0.4999) / 1000).toLocaleString(undefined, {maximumFractionDigits:1})} <span className="text-sm text-emerald-700/80 font-sans">tCO₂e/yr</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-emerald-800 uppercase tracking-wide font-medium mb-1">{t('cost_savings')}</div>
-                  <div className="text-2xl font-bold text-emerald-600 font-mono">
-                    {((calcResult.P_in * (measureData.pctReduction/100) * measureData.opHours * measureData.elecRate) || 0).toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-sm text-emerald-700/80 font-sans">{t('thb_yr')}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="flex justify-between pt-4 border-t border-border mt-6">
               <button onClick={() => setStep(3)} className="px-5 py-2.5 bg-white border border-border text-text font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm cursor-pointer">
