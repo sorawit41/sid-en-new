@@ -1,129 +1,100 @@
-import React, { useState, useContext } from 'react';
-import { Eye, EyeOff, ShieldCheck, Mail, Lock, ArrowRight } from 'lucide-react';
-import { AppContext } from '../context/AppContext';
-import { Navigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import companyLogo from '../assets/Logo.png';
 
-const USERS = [
-  {email:'admin@example.com', pw:'admin1234', name:'สมชาย วิศวกร', role:'Administrator', initials:'S'},
-  {email:'consult@example.com', pw:'consult1234', name:'วิภาพร ที่ปรึกษา', role:'Consultant', initials:'V'}
-];
-
-export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState('');
-  
-  const { user, login, t } = useContext(AppContext);
-
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    const u = USERS.find(u => u.email === email && u.pw === password);
-    if (!u) {
-      setError(t('invalid_login'));
-      return;
-    }
-    setError('');
-    login(u);
-  };
-
-  const autofillUser = (u) => {
-    setEmail(u.email);
-    setPassword(u.pw);
-  };
+function Login() {
+  const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-5 bg-bg relative overflow-hidden bg-grid-pattern">
-      {/* Dynamic Ambient Background Glows */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-accent/10 blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[350px] h-[350px] rounded-full bg-indigo-500/10 blur-[80px] pointer-events-none" />
+    <div className="min-h-screen w-full bg-animated-gradient flex flex-col items-center sm:justify-center font-sans relative overflow-x-hidden">
 
-      <div className="w-full max-w-md bg-surface/85 backdrop-blur-xl border border-border/80 rounded-2xl p-8 md:p-10 shadow-2xl animate-fade-in relative z-10 hover:border-accent/20 transition-colors duration-500">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl mx-auto mb-4 bg-gradient-to-tr from-accent to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-accent/25 hover:rotate-[360deg] transition-transform duration-700">
-            <ShieldCheck size={32} strokeWidth={2} />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-text">{t('welcome_title')}</h1>
-          <p className="text-sm text-muted mt-2">{t('welcome_sub')}</p>
-        </div>
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute w-full h-[150%] top-[-25%] bg-tech-grid animate-grid-pan opacity-80"></div>
+      </div>
 
-        {/* Demo Access Helpers */}
-        <div className="p-4 rounded-xl text-xs text-muted mb-6 bg-card2 border border-border/50 leading-relaxed">
-          <div className="font-semibold text-text mb-2 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-            {t('demo_access')}
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            {USERS.map((u, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => autofillUser(u)}
-                className="p-2 text-left bg-surface/80 border border-border rounded-lg hover:border-accent/40 hover:bg-accent/5 transition-all text-[11px] truncate flex flex-col justify-between active:scale-[0.97]"
-              >
-                <span className="font-bold text-text truncate">{u.name}</span>
-                <span className="text-[10px] text-muted truncate">{u.role}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Header: โลโก้ + ชื่อแพลตฟอร์ม */}
+      <div className="w-full max-w-md flex flex-col justify-center items-center relative pt-8 pb-5 sm:pt-0 sm:pb-6 z-10 shrink-0">
+        <img
+          src={companyLogo}
+          alt="Company Logo"
+          className="w-20 sm:w-28 h-auto object-contain drop-shadow-lg mb-3"
+        />
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-widest drop-shadow-md text-center">
+          ENGINSPECT
+        </h1>
+        <p className="text-sm sm:text-base text-[#BDE8F5] font-medium tracking-wider mt-1 drop-shadow">
+          Factory Energy Advisor
+        </p>
+        <p className="text-xs sm:text-sm text-white/60 font-medium tracking-wide mt-1 drop-shadow">
+          SID-EN Co., Ltd.
+        </p>
+      </div>
 
-        {error && (
-          <div className="p-3 rounded-lg text-sm mb-5 bg-red-500/10 border border-red-500/20 text-red-500 animate-slide-up">
-            {error}
-          </div>
-        )}
+      {/* ฟอร์ม Login */}
+      <div className="bg-[#F7F8F0] w-full max-w-md rounded-t-[3rem] sm:rounded-[2.5rem] px-8 pt-8 pb-10 sm:py-9 shadow-[0_-10px_20px_rgba(0,0,0,0.15)] sm:shadow-2xl z-10 flex-1 sm:flex-none flex flex-col relative overflow-hidden">
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <h2 className="text-3xl font-extrabold text-center text-[#0F2854] tracking-wide mb-7">
+          Login
+        </h2>
+
+        <form className="space-y-5">
+
           <div>
-            <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">{t('email')}</label>
-            <div className="relative">
-              <input 
-                type="email" 
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="name@company.com" 
-                className="w-full p-3 px-4 pl-11 bg-bg/50 border border-border rounded-xl text-sm transition-all focus:border-accent focus:ring-4 focus:ring-accent/10 focus:bg-surface outline-none shadow-sm font-medium text-text placeholder:text-dim"
-                required
+            <label className="block text-base font-bold text-gray-900 mb-2 ml-1">E-mail</label>
+            <div className="relative shadow-[0_4px_15px_rgba(0,0,0,0.04)] rounded-2xl">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-black">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                </svg>
+              </div>
+              <input
+                type="email"
+                placeholder="example@email.com"
+                className="w-full pl-12 pr-4 py-4 bg-white border border-transparent rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#0F2854] text-base text-gray-700 font-medium placeholder-gray-400"
               />
-              <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">{t('password')}</label>
-            <div className="relative">
-              <input 
-                type={showPw ? 'text' : 'password'} 
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••" 
-                className="w-full p-3 px-4 pl-11 pr-11 bg-bg/50 border border-border rounded-xl text-sm transition-all focus:border-accent focus:ring-4 focus:ring-accent/10 focus:bg-surface outline-none shadow-sm font-medium text-text placeholder:text-dim"
-                required
+            <label className="block text-base font-bold text-gray-900 mb-2 ml-1">Password</label>
+            <div className="relative shadow-[0_4px_15px_rgba(0,0,0,0.04)] rounded-2xl">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-black">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                </svg>
+              </div>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                className="w-full pl-12 pr-12 py-4 bg-white border border-transparent rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#0F2854] text-base text-gray-700 font-medium placeholder-gray-400"
               />
-              <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-dim" />
-              <button 
-                type="button" 
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-dim hover:text-text transition-colors bg-transparent border-none p-0 cursor-pointer"
-                onClick={() => setShowPw(!showPw)}
-              >
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-black cursor-pointer hover:text-gray-600 transition-colors">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-right mt-2 mr-1">
+              <button type="button" onClick={() => navigate('/forgot-password')} className="text-sm font-bold text-[#0F2854] hover:underline">ลืมรหัสผ่าน?</button>
             </div>
           </div>
 
-          <button 
-            type="submit"
-            className="w-full p-3 mt-4 rounded-xl bg-gradient-to-r from-accent to-indigo-500 text-white font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:shadow-accent/20 active:scale-[0.98] flex justify-center items-center gap-2 cursor-pointer border-none"
+          <button
+            type="button"
+            onClick={() => navigate('/home')}
+            className="w-full bg-[#0F2854] text-white font-bold text-xl py-5 rounded-2xl hover:bg-[#1C4D8D] transition-all duration-300 hover:shadow-[0_8px_25px_rgba(9,18,66,0.5)] hover:-translate-y-1 tracking-wide"
           >
-            {t('signin')} <ArrowRight size={16} />
+            Login
           </button>
         </form>
+
+        <div className="text-center pb-2 text-sm font-medium text-gray-600 mt-auto pt-8 sm:pt-0 sm:mt-6">
+          ยังไม่มีบัญชีใช่ไหม? <button onClick={() => navigate('/signup')} className="text-[#0F2854] font-bold hover:underline">สมัครสมาชิก</button>
+        </div>
+
       </div>
     </div>
   );
 }
+
+export default Login;
