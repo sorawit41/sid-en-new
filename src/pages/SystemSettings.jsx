@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { Sliders, Bell, Database, Save, Check } from 'lucide-react';
+import { Sliders, Bell, Database, Save, Check, Leaf, Plus, Trash2, DollarSign } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 
 export default function SystemSettings() {
@@ -7,9 +7,10 @@ export default function SystemSettings() {
   const [sysSettings, setSysSettings] = useState(data.settings || {
     theme: 'System Default',
     language: 'English (US)',
-    emissionFactor: 0.4999,
+    carbonTaxRate: 200,
     emailAlerts: true,
-    lineNotify: false
+    lineNotify: false,
+    emissionFactors: data.settings?.emissionFactors || []
   });
   const [isSaved, setIsSaved] = useState(false);
 
@@ -27,6 +28,34 @@ export default function SystemSettings() {
       ...p,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleEfChange = (id, field, value) => {
+    setSysSettings(p => ({
+      ...p,
+      emissionFactors: p.emissionFactors.map(ef => 
+        ef.id === id ? { ...ef, [field]: value } : ef
+      )
+    }));
+  };
+
+  const addEf = () => {
+    setSysSettings(p => ({
+      ...p,
+      emissionFactors: [
+        ...p.emissionFactors,
+        { id: 'ef_' + Date.now(), name: 'New Factor', unit: 'unit', value: 0, source: 'Custom' }
+      ]
+    }));
+  };
+
+  const removeEf = (id) => {
+    if (confirm('Are you sure you want to remove this emission factor?')) {
+      setSysSettings(p => ({
+        ...p,
+        emissionFactors: p.emissionFactors.filter(ef => ef.id !== id)
+      }));
+    }
   };
 
   const handleSave = () => {
@@ -61,6 +90,7 @@ export default function SystemSettings() {
                 <option value="System Default">System Default</option>
                 <option value="Light Mode">Light Mode</option>
                 <option value="Dark Mode">Dark Mode</option>
+                <option value="Corporate Mode">Corporate (Navy) Mode</option>
               </select>
             </div>
             
@@ -77,10 +107,13 @@ export default function SystemSettings() {
             
             <div className="flex items-center justify-between gap-4 pt-4 border-t border-border/50">
               <div>
-                <div className="text-xs font-bold text-text">{t('emission_factor')}</div>
-                <div className="text-[11px] text-muted font-medium mt-0.5">{t('emission_desc')}</div>
+                <div className="text-xs font-bold text-text">{t('carbon_tax_rate') || 'Carbon Tax Rate'}</div>
+                <div className="text-[11px] text-muted font-medium mt-0.5">{t('carbon_tax_desc') || 'Used to calculate financial savings from emission reduction.'}</div>
               </div>
-              <input type="number" name="emissionFactor" value={sysSettings.emissionFactor} onChange={handleChange} step="0.0001" className="w-24 p-2 bg-bg/50 border border-border rounded-xl text-xs font-bold outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 focus:bg-surface transition-all font-mono text-right" />
+              <div className="relative">
+                <input type="number" name="carbonTaxRate" value={sysSettings.carbonTaxRate} onChange={handleChange} step="1" className="w-28 p-2.5 pr-8 bg-bg/50 border border-border rounded-xl text-xs font-bold outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 transition-all font-mono text-right" />
+                <span className="absolute right-3 top-3 text-[10px] font-bold text-muted pointer-events-none">฿</span>
+              </div>
             </div>
           </div>
         </div>
@@ -149,6 +182,59 @@ export default function SystemSettings() {
           </div>
         </div>
         
+        
+      </div>
+
+      {/* Master Emission Factors Table */}
+      <div className="bg-surface border border-border/80 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-2">
+              <Leaf size={15} className="text-good" /> Master Emission Factors
+            </h4>
+            <p className="text-[11px] text-muted mt-1">Manage conversion factors for different energy sources and utilities.</p>
+          </div>
+          <button onClick={addEf} className="px-3 py-1.5 bg-accent hover:bg-accentHover text-white font-bold text-[10px] uppercase tracking-wider rounded-lg transition-all border-none cursor-pointer flex items-center gap-1 active:scale-95">
+            <Plus size={12} /> Add Factor
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto border border-border/50 rounded-xl">
+          <table className="w-full text-xs text-left whitespace-nowrap">
+            <thead className="bg-card2/50 text-[10px] uppercase tracking-wider text-muted font-bold border-b border-border/50">
+              <tr>
+                <th className="px-4 py-3">Energy Source / Product</th>
+                <th className="px-4 py-3">Factor Value</th>
+                <th className="px-4 py-3">Unit</th>
+                <th className="px-4 py-3">Reference (Source)</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/30">
+              {sysSettings.emissionFactors?.map((ef) => (
+                <tr key={ef.id} className="hover:bg-bg/30 transition-colors">
+                  <td className="px-4 py-2">
+                    <input type="text" value={ef.name} onChange={(e) => handleEfChange(ef.id, 'name', e.target.value)} className="w-full p-1.5 bg-transparent border border-transparent hover:border-border/60 focus:bg-bg focus:border-accent rounded text-xs font-bold text-text outline-none transition-all" />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input type="number" value={ef.value} onChange={(e) => handleEfChange(ef.id, 'value', parseFloat(e.target.value))} step="0.0001" className="w-24 p-1.5 bg-transparent border border-transparent hover:border-border/60 focus:bg-bg focus:border-accent rounded text-xs font-mono font-bold text-text outline-none transition-all" />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input type="text" value={ef.unit} onChange={(e) => handleEfChange(ef.id, 'unit', e.target.value)} className="w-20 p-1.5 bg-transparent border border-transparent hover:border-border/60 focus:bg-bg focus:border-accent rounded text-xs font-medium text-muted outline-none transition-all" />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input type="text" value={ef.source} onChange={(e) => handleEfChange(ef.id, 'source', e.target.value)} className="w-full p-1.5 bg-transparent border border-transparent hover:border-border/60 focus:bg-bg focus:border-accent rounded text-xs font-medium text-muted outline-none transition-all" />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <button onClick={() => removeEf(ef.id)} disabled={ef.id === 'ef_elec'} className="p-1.5 text-muted hover:text-bad rounded hover:bg-bad/10 transition-colors border-none bg-transparent cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Action Footer */}

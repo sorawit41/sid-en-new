@@ -39,7 +39,7 @@ export default function EnergyDashboard() {
     });
   }, [data, filterFact, filterCat, filterYear, filterType]);
 
-  const emissionFactor = data?.settings?.emissionFactor !== undefined ? parseFloat(data.settings.emissionFactor) : GHG_ELEC;
+  const emissionFactor = data?.settings?.emissionFactors?.find(ef => ef.id === 'ef_elec')?.value || GHG_ELEC;
 
   const totalElec = ms.filter(m => m.energyType !== 'heat').reduce((a, m) => a + (m.kWhYear || 0), 0);
   const totalHeat = ms.filter(m => m.energyType === 'heat').reduce((a, m) => a + (m.kWhYear || 0), 0);

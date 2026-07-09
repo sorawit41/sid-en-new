@@ -97,7 +97,7 @@ export default function EquipmentRegistry() {
     const fMeas = data.measures.filter(m => m.factory === factoryParam);
     const elec = fMeas.filter(m => m.energyType !== 'heat').reduce((a, m) => a + (m.kWhYear || 0), 0);
     const heat = fMeas.filter(m => m.energyType === 'heat').reduce((a, m) => a + (m.kWhYear || 0), 0);
-    const emissionFactor = data?.settings?.emissionFactor !== undefined ? parseFloat(data.settings.emissionFactor) : 0.4999;
+    const emissionFactor = data?.settings?.emissionFactors?.find(ef => ef.id === 'ef_elec')?.value || 0.5562;
     const ghgSaved = (elec * emissionFactor / 1000) + (heat * 3.6 * 0.0682 / 1000);
     
     return {
@@ -115,7 +115,7 @@ export default function EquipmentRegistry() {
     const fEqIds = fEqs.map(e => e.id);
     
     const fMeas = data.measures.filter(m => m.factory === factoryParam || fEqIds.includes(m.eqId));
-    const emissionFactor = data?.settings?.emissionFactor !== undefined ? parseFloat(data.settings.emissionFactor) : 0.4999;
+    const emissionFactor = data?.settings?.emissionFactors?.find(ef => ef.id === 'ef_elec')?.value || 0.5562;
     
     const byCat = {};
     data.cats.forEach(c => {

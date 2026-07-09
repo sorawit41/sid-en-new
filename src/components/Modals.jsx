@@ -6,7 +6,7 @@ export function ModalWrapper({ isOpen, onClose, title, children, maxWidth = '500
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/5 backdrop-blur-md animate-fade-in">
       <div 
         className="bg-surface border border-border/80 rounded-2xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-modal-in overflow-hidden" 
         style={{ maxWidth }}

@@ -4,49 +4,72 @@
 
 @layer base {
   :root {
-    /* Premium Indigo Light Theme */
-    --bg: #f8fafc; /* slate-50 */
-    --surface: #ffffff; /* white */
+    /* ENGINSPECT Light Theme (matching old design) */
+    --bg: #F0F2F7;
+    --surface: #ffffff;
     --card: #ffffff;
-    --card2: #f1f5f9; /* slate-100 */
+    --card2: #F7F8F0;
     
-    --border: #e2e8f0; /* slate-200 */
-    --border2: #cbd5e1; /* slate-300 */
-    --border-hover: #94a3b8; /* slate-400 */
+    --border: #e2e8f0;
+    --border2: #cbd5e1;
+    --border-hover: #94a3b8;
     
-    --accent: #4f46e5; /* indigo-600 */
-    --accent-hover: #4338ca; /* indigo-700 */
+    --accent: #4988C4;
+    --accent-hover: #1C4D8D;
     
-    --text: #0f172a; /* slate-900 */
-    --muted: #64748b; /* slate-500 */
-    --dim: #94a3b8; /* slate-400 */
+    --text: #0F2854;
+    --muted: #6b7280;
+    --dim: #9ca3af;
     
-    --good: #10b981; /* emerald-500 */
+    --good: #10b981;
+    --bad: #ef4444;
+    --warn: #f59e0b;
+  }
+
+  html.corporate {
+    /* Corporate Navy Theme based on user request */
+    --bg: #F0F2F7;
+    --surface: #ffffff;
+    --card: #ffffff;
+    --card2: #F7F8F0; /* hover background */
+    
+    --border: #f3f4f6; /* gray-100 */
+    --border2: #cbd5e1;
+    --border-hover: #4988C4;
+    
+    --accent: #4988C4;
+    --accent-hover: #1C4D8D;
+    
+    --text: #0F2854;
+    --muted: #6b7280; /* gray-500 */
+    --dim: #9ca3af; /* gray-400 */
+    
+    --good: #4ade80; /* green-400 */
     --bad: #ef4444; /* red-500 */
-    --warn: #f59e0b; /* amber-500 */
+    --warn: #fbbf24; /* amber-400 */
   }
 
   html.dark {
-    /* Sleek Tech Navy/Black Theme */
-    --bg: #030712; /* gray-950 */
-    --surface: #0b0f19; /* dark navy */
-    --card: #0f172a; /* slate-900 */
-    --card2: #1e293b; /* slate-800 */
+    /* ENGINSPECT Dark Theme */
+    --bg: #030712;
+    --surface: #0b0f19;
+    --card: #0f172a;
+    --card2: #1e293b;
     
-    --border: #1e293b; /* slate-800 */
-    --border2: #334155; /* slate-700 */
-    --border-hover: #475569; /* slate-600 */
+    --border: #1e293b;
+    --border2: #334155;
+    --border-hover: #475569;
     
-    --accent: #818cf8; /* indigo-400 */
-    --accent-hover: #6366f1; /* indigo-500 */
+    --accent: #BDE8F5;
+    --accent-hover: #4988C4;
     
-    --text: #f8fafc; /* slate-50 */
-    --muted: #94a3b8; /* slate-400 */
-    --dim: #64748b; /* slate-500 */
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --dim: #64748b;
     
-    --good: #34d399; /* emerald-400 */
-    --bad: #f87171; /* red-400 */
-    --warn: #fbbf24; /* amber-400 */
+    --good: #34d399;
+    --bad: #f87171;
+    --warn: #fbbf24;
   }
 
   body {
@@ -76,6 +99,30 @@
     background-image: 
       linear-gradient(to right, rgba(129, 140, 248, 0.015) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(129, 140, 248, 0.015) 1px, transparent 1px);
+  }
+
+  .bg-animated-gradient {
+    background: linear-gradient(-45deg, #0F2854, #1C4D8D, #0F2854, #4988C4);
+    background-size: 400% 400%;
+    animation: gradientMove 12s ease infinite;
+  }
+  
+  .bg-tech-grid {
+    background-size: 50px 50px; 
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
+    mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
+  }
+
+  .animate-grid-pan {
+    animation: gridPan 4s linear infinite;
+  }
+  @media (min-width: 1024px) {
+    .animate-grid-pan {
+      animation: none;
+    }
   }
 
   .animate-fade-in { 
@@ -128,4 +175,15 @@
 
 @keyframes draw-progress {
   from { width: 0%; }
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes gridPan {
+  0% { transform: translateY(-50px); }
+  100% { transform: translateY(0px); }
 }

@@ -4,6 +4,8 @@ import { AppProvider, AppContext } from './context/AppContext';
 
 // Pages & Components
 import Login from './pages/Login';
+import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import EnergyDashboard from './pages/EnergyDashboard';
 import EquipmentRegistry from './pages/EquipmentRegistry';
@@ -13,6 +15,8 @@ import ReportSystem from './pages/ReportSystem';
 import AccountSettings from './pages/AccountSettings';
 import SystemSettings from './pages/SystemSettings';
 import AppLayout from './components/AppLayout';
+import FactoriesList from './pages/FactoriesList';
+import FactoryDetail from './pages/FactoryDetail';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -27,6 +31,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           
           <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
@@ -37,6 +43,8 @@ export default function App() {
             <Route path="report" element={<ReportSystem />} />
             <Route path="account" element={<AccountSettings />} />
             <Route path="system" element={<SystemSettings />} />
+            <Route path="factories" element={<FactoriesList />} />
+            <Route path="factories/:factoryId" element={<FactoryDetail />} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />

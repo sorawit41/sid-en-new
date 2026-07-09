@@ -44,10 +44,14 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
     model: '',
     catId: 'other',
     factory: 'โรงงานอยุธยา',
+    dept: '',
+    year: new Date().getFullYear().toString(),
     kw: '',
     capacity: '',
     efficiency: '',
-    rated: ''
+    rated: '',
+    opHoursYear: 8000,
+    loadFactor: 0.8
   });
 
   const catalogOptions = CATALOG_MODELS[formData?.catId] || [];
@@ -61,10 +65,14 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
           model: equipment.model || '',
           catId: equipment.catId || 'other',
           factory: equipment.factory || (factories[0] || 'โรงงานอยุธยา'),
+          dept: equipment.dept || '',
+          year: equipment.year || new Date().getFullYear().toString(),
           kw: equipment.kw || '',
           capacity: equipment.capacity || '',
           efficiency: equipment.efficiency || '',
-          rated: equipment.rated || ''
+          rated: equipment.rated || '',
+          opHoursYear: equipment.opHoursYear || 8000,
+          loadFactor: equipment.loadFactor || 0.8
         });
       } else {
         setFormData({
@@ -73,10 +81,14 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
           model: '',
           catId: 'compressor',
           factory: factories[0] || 'โรงงานอยุธยา',
+          dept: '',
+          year: new Date().getFullYear().toString(),
           kw: '',
           capacity: '',
           efficiency: '',
-          rated: ''
+          rated: '',
+          opHoursYear: 8000,
+          loadFactor: 0.8
         });
       }
     }
@@ -138,15 +150,32 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
     e.preventDefault();
     if (!formData.tag.trim()) return alert('Tag name is required');
 
+    const kw = parseNumber(formData.kw) || 0;
+    const hours = parseNumber(formData.opHoursYear) || 8000;
+    const lf = parseNumber(formData.loadFactor) || 0.8;
+    const electricityRate = data?.settings?.electricityRate !== undefined ? parseFloat(data.settings.electricityRate) : 4.2;
+    const emissionFactor = data?.settings?.emissionFactors?.find(ef => ef.id === 'ef_elec')?.value || 0.5562;
+    
+    const energyUseYear = kw * lf * hours;
+    const costYear = energyUseYear * electricityRate;
+    const co2Year = energyUseYear * emissionFactor;
+
+    const finalData = {
+      ...formData,
+      energyUseYear,
+      costYear,
+      co2Year
+    };
+
     let newEquipments;
     if (equipment) {
       // Edit
-      newEquipments = data.equipments.map(eq => eq.id === equipment.id ? { ...eq, ...formData } : eq);
+      newEquipments = data.equipments.map(eq => eq.id === equipment.id ? { ...eq, ...finalData } : eq);
     } else {
       // Add
       const newEq = {
         id: 'eq_' + Date.now(),
-        ...formData
+        ...finalData
       };
       newEquipments = [...data.equipments, newEq];
     }
@@ -185,6 +214,36 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
               <select name="catId" value={formData.catId} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all">
                 {data.cats && data.cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+            </div>
+          </div>
+
+          {/* Dept and Install Year row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-muted mb-1.5">{lang === 'th' ? 'แผนก / ตำแหน่งติดตั้ง' : 'Department / Location'}</label>
+              <input type="text" name="dept" value={formData.dept} onChange={handleChange} placeholder={lang === 'th' ? 'เช่น ห้องคอมเพรสเซอร์' : 'e.g. Compressor Room'} className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted mb-1.5">
+                {lang === 'th' ? 'ปีที่ติดตั้ง (ใช้คำนวณอายุ)' : 'Year of Installation (for age calc)'}
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  name="year"
+                  value={formData.year}
+                  onChange={handleChange}
+                  placeholder={new Date().getFullYear().toString()}
+                  min="1990"
+                  max={new Date().getFullYear()}
+                  className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono"
+                />
+                {formData.year && (
+                  <span className="absolute right-3 top-2.5 text-[10px] font-bold text-accent">
+                    {lang === 'th' ? `อายุ ${new Date().getFullYear() - parseInt(formData.year)} ปี` : `${new Date().getFullYear() - parseInt(formData.year)} yrs old`}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -265,6 +324,17 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
                 />
                 <Activity size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500" />
               </div>
+            </div>
+            </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-muted mb-1.5">{lang === 'th' ? 'ชั่วโมงการทำงาน (ชม./ปี)' : 'Operating Hours (hrs/yr)'}</label>
+              <input type="number" name="opHoursYear" value={formData.opHoursYear} onChange={handleChange} placeholder="e.g. 8000" className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted mb-1.5">{lang === 'th' ? 'ภาระการทำงานเฉลี่ย (Load Factor)' : 'Average Load Factor (0-1)'}</label>
+              <input type="number" step="0.01" min="0" max="1" name="loadFactor" value={formData.loadFactor} onChange={handleChange} placeholder="e.g. 0.8" className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono" />
             </div>
           </div>
         </div>

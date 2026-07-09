@@ -1,7 +1,7 @@
 import React, { useContext, useState, useMemo, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { ModalWrapper } from '../components/Modals';
-import { Sparkles, Lightbulb, Play, Layers, Tag, ShieldCheck, DollarSign, Calculator, LeafyGreen, Zap, Check, ChevronRight, Snowflake, Wind, Droplets, Flame, Factory as FactoryIcon, Settings } from 'lucide-react';
+import { Sparkles, Lightbulb, Play, Layers, Tag, ShieldCheck, DollarSign, Calculator, LeafyGreen, Zap, Check, ChevronRight, Snowflake, Wind, Droplets, Flame, Factory as FactoryIcon, Settings, Plus, Pencil, Trash2 } from 'lucide-react';
 
 const iconMap = {
   Snowflake: <Snowflake size={18} />,
@@ -14,32 +14,32 @@ const iconMap = {
 
 const RECOMMENDATIONS = {
   chiller: [
-    { id: 'rec_ch_1', brand: 'Daikin', model: 'Magnitude WZH', spec: '0.48 kW/TR (COP 7.3)', costEst: 4500000, desc: 'Magnetic bearing oil-free centrifugal chiller, maximum part-load efficiency.', efficiency: 0.48, energyType: 'elec' },
-    { id: 'rec_ch_2', brand: 'York', model: 'YMC2 Centrifugal', spec: '0.49 kW/TR (COP 7.2)', costEst: 4200000, desc: 'Magnetic bearing centrifugal chiller with integrated VSD.', efficiency: 0.49, energyType: 'elec' },
-    { id: 'rec_ch_3', brand: 'Carrier', model: '19DV AquaEdge', spec: '0.52 kW/TR (COP 6.8)', costEst: 3800000, desc: 'Centrifugal chiller using low-GWP R-1233zd(E) refrigerant.', efficiency: 0.52, energyType: 'elec' },
-    { id: 'rec_ch_4', brand: 'Trane', model: 'CVHE CenTraVac', spec: '0.55 kW/TR (COP 6.4)', costEst: 3500000, desc: 'High-efficiency multi-stage water-cooled centrifugal chiller.', efficiency: 0.55, energyType: 'elec' }
+    { id: 'rec_ch_1', brand: 'Daikin', model: 'Magnitude WZH', spec: '0.48 kW/TR (COP 7.3)', costEst: 4500000, desc: 'Magnetic bearing oil-free centrifugal chiller, maximum part-load efficiency.', efficiency: 0.48, energyType: 'elec', image: '/catalog/rec_ch_1.png' },
+    { id: 'rec_ch_2', brand: 'York', model: 'YMC2 Centrifugal', spec: '0.49 kW/TR (COP 7.2)', costEst: 4200000, desc: 'Magnetic bearing centrifugal chiller with integrated VSD.', efficiency: 0.49, energyType: 'elec', image: '/catalog/rec_ch_2.png' },
+    { id: 'rec_ch_3', brand: 'Carrier', model: '19DV AquaEdge', spec: '0.52 kW/TR (COP 6.8)', costEst: 3800000, desc: 'Centrifugal chiller using low-GWP R-1233zd(E) refrigerant.', efficiency: 0.52, energyType: 'elec', image: '/catalog/rec_ch_3.png' },
+    { id: 'rec_ch_4', brand: 'Trane', model: 'CVHE CenTraVac', spec: '0.55 kW/TR (COP 6.4)', costEst: 3500000, desc: 'High-efficiency multi-stage water-cooled centrifugal chiller.', efficiency: 0.55, energyType: 'elec', image: '/catalog/rec_ch_4.png' }
   ],
   compressor: [
-    { id: 'rec_cp_1', brand: 'Atlas Copco', model: 'GA 75 VSD+', spec: 'Specific Energy: 5.6 kW/(m³/min)', costEst: 1200000, desc: 'Permanent magnet motor variable speed drive oil-injected rotary screw compressor.', efficiency: 5.6, energyType: 'elec' },
-    { id: 'rec_cp_2', brand: 'Ingersoll Rand', model: 'Nirvana VSD', spec: 'Specific Energy: 5.8 kW/(m³/min)', costEst: 1100000, desc: 'VSD rotary screw air compressor with high-efficiency hybrid PM motor.', efficiency: 5.8, energyType: 'elec' },
-    { id: 'rec_cp_3', brand: 'Sullair', model: 'LS 90 VSD', spec: 'Specific Energy: 6.1 kW/(m³/min)', costEst: 950000, desc: 'Rotary screw air compressor with electronic spiral valve part-load control.', efficiency: 6.1, energyType: 'elec' }
+    { id: 'rec_cp_1', brand: 'Atlas Copco', model: 'GA 75 VSD+', spec: 'Specific Energy: 5.6 kW/(m³/min)', costEst: 1200000, desc: 'Permanent magnet motor variable speed drive oil-injected rotary screw compressor.', efficiency: 5.6, energyType: 'elec', image: '/catalog/rec_cp_1.png' },
+    { id: 'rec_cp_2', brand: 'Ingersoll Rand', model: 'Nirvana VSD', spec: 'Specific Energy: 5.8 kW/(m³/min)', costEst: 1100000, desc: 'VSD rotary screw air compressor with high-efficiency hybrid PM motor.', efficiency: 5.8, energyType: 'elec', image: '/catalog/rec_cp_2.png' },
+    { id: 'rec_cp_3', brand: 'Sullair', model: 'LS 90 VSD', spec: 'Specific Energy: 6.1 kW/(m³/min)', costEst: 950000, desc: 'Rotary screw air compressor with electronic spiral valve part-load control.', efficiency: 6.1, energyType: 'elec', image: '/catalog/rec_cp_3.png' }
   ],
   pump: [
-    { id: 'rec_pm_1', brand: 'Grundfos', model: 'CR 45 VSD', spec: 'Pump Eff: 84%, VSD Equipped', costEst: 320000, desc: 'Vertical multistage centrifugal pump with integrated variable frequency drive.', efficiency: 0.84, energyType: 'elec' },
-    { id: 'rec_pm_2', brand: 'Ebara', model: '3M End Suction', spec: 'Pump Eff: 81%', costEst: 180000, desc: 'Stainless steel end suction centrifugal water pump with high-efficiency motor.', efficiency: 0.81, energyType: 'elec' },
-    { id: 'rec_pm_3', brand: 'Lowara', model: 'e-NSC Series', spec: 'Pump Eff: 82%', costEst: 200000, desc: 'High-efficiency space-saving end-suction centrifugal pump.', efficiency: 0.82, energyType: 'elec' }
+    { id: 'rec_pm_1', brand: 'Grundfos', model: 'CR 45 VSD', spec: 'Pump Eff: 84%, VSD Equipped', costEst: 320000, desc: 'Vertical multistage centrifugal pump with integrated variable frequency drive.', efficiency: 0.84, energyType: 'elec', image: '/catalog/rec_pm_1.png' },
+    { id: 'rec_pm_2', brand: 'Ebara', model: '3M End Suction', spec: 'Pump Eff: 81%', costEst: 180000, desc: 'Stainless steel end suction centrifugal water pump with high-efficiency motor.', efficiency: 0.81, energyType: 'elec', image: '/catalog/rec_pm_2.png' },
+    { id: 'rec_pm_3', brand: 'Lowara', model: 'e-NSC Series', spec: 'Pump Eff: 82%', costEst: 200000, desc: 'High-efficiency space-saving end-suction centrifugal pump.', efficiency: 0.82, energyType: 'elec', image: '/catalog/rec_pm_3.png' }
   ],
   boiler: [
-    { id: 'rec_bl_1', brand: 'Miura', model: 'LX-200 Once-Through', spec: 'Thermal Eff: 87%', costEst: 2800000, desc: 'Once-through steam boiler, fast steam generation, compact vertical layout.', efficiency: 0.87, energyType: 'heat' },
-    { id: 'rec_bl_2', brand: 'Cleaver-Brooks', model: 'CBE Firetube', spec: 'Thermal Eff: 85%', costEst: 2400000, desc: 'High-efficiency firetube steam boiler with low-NOx burner integration.', efficiency: 0.85, energyType: 'heat' },
-    { id: 'rec_bl_3', brand: 'Fulton', model: 'FB-F Tubeless', spec: 'Thermal Eff: 83%', costEst: 1900000, desc: 'Vertical tubeless steam boiler, space-saving design, robust construction.', efficiency: 0.83, energyType: 'heat' }
+    { id: 'rec_bl_1', brand: 'Miura', model: 'LX-200 Once-Through', spec: 'Thermal Eff: 87%', costEst: 2800000, desc: 'Once-through steam boiler, fast steam generation, compact vertical layout.', efficiency: 0.87, energyType: 'heat', image: '/catalog/rec_bl_1.png' },
+    { id: 'rec_bl_2', brand: 'Cleaver-Brooks', model: 'CBE Firetube', spec: 'Thermal Eff: 85%', costEst: 2400000, desc: 'High-efficiency firetube steam boiler with low-NOx burner integration.', efficiency: 0.85, energyType: 'heat', image: '/catalog/rec_bl_2.png' },
+    { id: 'rec_bl_3', brand: 'Fulton', model: 'FB-F Tubeless', spec: 'Thermal Eff: 83%', costEst: 1900000, desc: 'Vertical tubeless steam boiler, space-saving design, robust construction.', efficiency: 0.83, energyType: 'heat', image: '/catalog/rec_bl_3.png' }
   ],
   cooling: [
-    { id: 'rec_ct_1', brand: 'Marley', model: 'NC 8410', spec: 'Crossflow, Low Fan Power', costEst: 650000, desc: 'Induced draft crossflow cooling tower, maximum performance density.', efficiency: 1.0, energyType: 'elec' },
-    { id: 'rec_ct_2', brand: 'Liang Chi', model: 'LBC Counterflow', spec: 'Counterflow, FRP Casing', costEst: 420000, desc: 'Induced draft counterflow bottle-type cooling tower, high durability.', efficiency: 1.0, energyType: 'elec' }
+    { id: 'rec_ct_1', brand: 'Marley', model: 'NC 8410', spec: 'Crossflow, Low Fan Power', costEst: 650000, desc: 'Induced draft crossflow cooling tower, maximum performance density.', efficiency: 1.0, energyType: 'elec', image: '/catalog/rec_ct_1.png' },
+    { id: 'rec_ct_2', brand: 'Liang Chi', model: 'LBC Counterflow', spec: 'Counterflow, FRP Casing', costEst: 420000, desc: 'Induced draft counterflow bottle-type cooling tower, high durability.', efficiency: 1.0, energyType: 'elec', image: '/catalog/rec_ct_2.png' }
   ],
   electrical: [
-    { id: 'rec_el_1', brand: 'ABB', model: 'EcoDry Ultra', spec: 'Ultra Low Losses (Amorphous)', costEst: 1500000, desc: 'Amorphous core distribution transformer, up to 70% reduction in no-load losses.', efficiency: 0.99, energyType: 'elec' }
+    { id: 'rec_el_1', brand: 'ABB', model: 'EcoDry Ultra', spec: 'Ultra Low Losses (Amorphous)', costEst: 1500000, desc: 'Amorphous core distribution transformer, up to 70% reduction in no-load losses.', efficiency: 0.99, energyType: 'elec', image: '/catalog/rec_el_1.png' }
   ]
 };
 
@@ -58,8 +58,51 @@ export default function Catalog() {
   const [investCost, setInvestCost] = useState('');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
+  const [catalogItems, setCatalogItems] = useState(RECOMMENDATIONS);
+
+  // Add Equipment Modal states
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [editEqId, setEditEqId] = useState(null);
+  const [newCategory, setNewCategory] = useState(activeTab);
+  const [newBrand, setNewBrand] = useState('');
+  const [newModel, setNewModel] = useState('');
+  const [newSpec, setNewSpec] = useState('');
+  const [newCost, setNewCost] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newImage, setNewImage] = useState(null);
+
+  const openAddModal = () => {
+    setEditEqId(null);
+    setNewCategory(activeTab);
+    setNewBrand('');
+    setNewModel('');
+    setNewSpec('');
+    setNewCost('');
+    setNewDesc('');
+    setNewImage(null);
+    setIsConfirmingDelete(false);
+    setDeleteInput('');
+    setIsAddModalOpen(true);
+  };
+
+  const openEditModal = (rec) => {
+    setEditEqId(rec.id);
+    setNewCategory(activeTab);
+    setNewBrand(rec.brand);
+    setNewModel(rec.model);
+    setNewSpec(rec.spec);
+    setNewCost(rec.costEst);
+    setNewDesc(rec.desc);
+    setNewImage(rec.image || null);
+    setIsConfirmingDelete(false);
+    setDeleteInput('');
+    setIsAddModalOpen(true);
+  };
+
   const activeCategory = data.cats.find(c => c.id === activeTab) || data.cats[0];
-  const recommendationsList = RECOMMENDATIONS[activeTab] || [];
+  const recommendationsList = catalogItems[activeTab] || [];
   
   // Filter user equipment by active category tab
   const categoryEquipments = useMemo(() => {
@@ -134,7 +177,7 @@ export default function Catalog() {
       kwhYear = 8760 * capacityKVA * 0.015 * 0.65; // Amorphous core loss gains
     }
     
-    const emissionFactor = data?.settings?.emissionFactor !== undefined ? parseFloat(data.settings.emissionFactor) : 0.4999;
+    const emissionFactor = data?.settings?.emissionFactors?.find(ef => ef.id === 'ef_elec')?.value || 0.5562;
     const ghgYear = costType === 'heat' 
       ? (kwhYear * 3.6 * 0.0682) / 1000 
       : (kwhYear * emissionFactor) / 1000;
@@ -185,10 +228,69 @@ export default function Catalog() {
     });
 
     setShowSaveSuccess(true);
+    setShowSaveSuccess(true);
     setTimeout(() => {
       setShowSaveSuccess(false);
       setIsSimModalOpen(false);
     }, 2000);
+  };
+
+  const handleAddCatalogItem = (e) => {
+    e.preventDefault();
+    if (!newBrand || !newModel || !newCost) return;
+    
+    if (editEqId) {
+      if (newCategory !== activeTab) {
+        setCatalogItems(prev => {
+          const oldList = (prev[activeTab] || []).filter(item => item.id !== editEqId);
+          const oldItem = (prev[activeTab] || []).find(item => item.id === editEqId);
+          const newItem = { ...oldItem, brand: newBrand, model: newModel, spec: newSpec, costEst: Number(newCost), desc: newDesc, image: newImage };
+          const newList = [...(prev[newCategory] || []), newItem];
+          return {
+            ...prev,
+            [activeTab]: oldList,
+            [newCategory]: newList
+          };
+        });
+      } else {
+        setCatalogItems(prev => ({
+          ...prev,
+          [activeTab]: (prev[activeTab] || []).map(item => 
+            item.id === editEqId 
+              ? { ...item, brand: newBrand, model: newModel, spec: newSpec, costEst: Number(newCost), desc: newDesc, image: newImage }
+              : item
+          )
+        }));
+      }
+    } else {
+      const newItem = {
+        id: 'rec_new_' + Date.now(),
+        brand: newBrand,
+        model: newModel,
+        spec: newSpec || '-',
+        costEst: Number(newCost),
+        desc: newDesc || '-',
+        efficiency: 1.0,
+        energyType: 'elec',
+        image: newImage
+      };
+      setCatalogItems(prev => ({
+        ...prev,
+        [newCategory]: [...(prev[newCategory] || []), newItem]
+      }));
+    }
+    
+    setIsAddModalOpen(false);
+  };
+
+  const confirmDelete = () => {
+    if (deleteInput === 'delete' && editEqId) {
+      setCatalogItems(prev => ({
+        ...prev,
+        [activeTab]: (prev[activeTab] || []).filter(item => item.id !== editEqId)
+      }));
+      setIsAddModalOpen(false);
+    }
   };
 
   const fmt = (v) => (v || 0).toLocaleString('en-US');
@@ -220,29 +322,48 @@ export default function Catalog() {
 
       {/* Recommendations catalog grid layout */}
       <div className="space-y-4">
-        <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-2 mb-2">
-          <Layers size={14} className="text-accent" /> {t('recommended_model')} ({activeCategory.name})
-        </h3>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-2">
+            <Layers size={14} className="text-accent" /> {t('recommended_model')} ({activeCategory.name})
+          </h3>
+          <button 
+            onClick={openAddModal}
+            className="flex items-center gap-1.5 text-xs font-bold text-white bg-accent hover:bg-accent-hover px-3 py-1.5 rounded-lg transition-colors shadow-sm cursor-pointer z-10 relative"
+          >
+            <Plus size={14} /> เพิ่มอุปกรณ์
+          </button>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {recommendationsList.map(rec => {
             return (
               <div 
                 key={rec.id}
-                className="bg-surface border border-border/80 p-5 rounded-2xl flex flex-col justify-between hover-lift relative overflow-hidden group transition-all duration-300 h-64 hover:border-accent/40"
+                className="bg-surface border border-border/80 p-5 rounded-2xl flex flex-col justify-between hover-lift relative overflow-hidden group transition-all duration-300 h-auto min-h-[16rem] hover:border-accent/40"
               >
                 <div>
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start relative z-10">
                     <div>
                       <span className="text-[10px] text-accent font-bold uppercase tracking-wider">{rec.brand}</span>
                       <h4 className="font-bold text-text text-base mt-0.5 line-clamp-1 group-hover:text-accent transition-colors">{rec.model}</h4>
                     </div>
-                    <span className="p-1.5 rounded-xl border bg-card2 text-dim border-border/40">
-                      {iconMap[activeCategory.icon] || <Settings size={14} />}
-                    </span>
+                    <div className="flex gap-1.5">
+                      <button onClick={(e) => { e.stopPropagation(); openEditModal(rec); }} className="p-1.5 rounded-xl border bg-card2 text-dim border-border/40 hover:text-accent hover:border-accent/40 cursor-pointer transition-colors z-20">
+                        <Pencil size={14} />
+                      </button>
+                      <span className="p-1.5 rounded-xl border bg-card2 text-dim border-border/40">
+                        {iconMap[activeCategory.icon] || <Settings size={14} />}
+                      </span>
+                    </div>
                   </div>
 
-                  <p className="text-xs text-muted font-medium mt-3 leading-relaxed min-h-[48px]">{rec.desc}</p>
+                  {rec.image && (
+                    <div className="mt-4 w-full h-40 md:h-48 flex items-center justify-center overflow-hidden">
+                      <img src={rec.image} alt={rec.model} className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted font-medium mt-3 leading-relaxed min-h-[48px] line-clamp-2">{rec.desc}</p>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between gap-4">
@@ -395,6 +516,107 @@ export default function Catalog() {
               </div>
             )}
           </div>
+        )}
+      </ModalWrapper>
+
+      {/* Add New Equipment Modal */}
+      <ModalWrapper isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title={editEqId ? (isConfirmingDelete ? "ยืนยันการลบอุปกรณ์" : "แก้ไขข้อมูลอุปกรณ์") : "เพิ่มอุปกรณ์แนะนำใหม่"} maxWidth="800px">
+        {isConfirmingDelete ? (
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center animate-fade-in w-full">
+            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-5 ring-4 ring-red-500/5">
+              <Trash2 size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-text mb-2">ลบอุปกรณ์แนะนำใช่หรือไม่?</h3>
+            <p className="text-sm text-muted mb-8 max-w-sm leading-relaxed">
+              คุณกำลังจะลบอุปกรณ์ <strong className="text-text font-bold">{newBrand} {newModel}</strong><br/>
+              หากต้องการยืนยัน โปรดพิมพ์คำว่า <strong className="text-red-500 font-bold bg-red-500/10 px-1.5 py-0.5 rounded">delete</strong>
+            </p>
+            <input 
+              type="text" 
+              value={deleteInput} 
+              onChange={e => setDeleteInput(e.target.value)} 
+              placeholder="พิมพ์ delete เพื่อยืนยัน" 
+              className="w-full max-w-[240px] bg-bg border border-border rounded-xl px-4 py-3 text-center text-sm text-text outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 mb-8 font-mono transition-all"
+            />
+            <div className="flex gap-3 w-full max-w-[280px]">
+              <button type="button" onClick={() => { setIsConfirmingDelete(false); setDeleteInput(''); }} className="flex-1 py-3 rounded-xl bg-surface border border-border text-text text-xs font-bold hover:bg-bg transition-colors cursor-pointer shadow-sm">
+                ยกเลิก
+              </button>
+              <button type="button" onClick={confirmDelete} disabled={deleteInput !== 'delete'} className={`flex-1 py-3 rounded-xl text-white text-xs font-bold transition-all uppercase tracking-wider ${deleteInput === 'delete' ? 'bg-red-500 hover:bg-red-600 shadow-md shadow-red-500/20 cursor-pointer active:scale-95 border-none' : 'bg-red-300 cursor-not-allowed border-none'}`}>
+                ลบข้อมูล
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleAddCatalogItem} className="space-y-4">
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">รูปภาพอุปกรณ์ (Image)</label>
+              <div className="flex gap-4 items-start">
+                {newImage && (
+                  <div className="w-20 h-20 shrink-0 bg-white border border-border/40 rounded-lg overflow-hidden p-1 relative group">
+                    <img src={newImage} alt="preview" className="w-full h-full object-contain" />
+                    <button type="button" onClick={() => setNewImage(null)} className="absolute inset-0 bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                      X
+                    </button>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={e => {
+                      if (e.target.files && e.target.files[0]) {
+                        setNewImage(URL.createObjectURL(e.target.files[0]));
+                      }
+                    }}
+                    className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-accent" 
+                  />
+                  <p className="text-[9px] text-muted mt-1">รองรับไฟล์ PNG, JPG</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">หมวดหมู่ (Category) *</label>
+              <select value={newCategory} onChange={e => setNewCategory(e.target.value)} className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-accent">
+                {data.cats.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">ยี่ห้อ (Brand) *</label>
+              <input type="text" required value={newBrand} onChange={e => setNewBrand(e.target.value)} className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-accent" placeholder="e.g. Daikin" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">รุ่น (Model) *</label>
+              <input type="text" required value={newModel} onChange={e => setNewModel(e.target.value)} className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-accent" placeholder="e.g. Magnitude WZH" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">สเปก (Spec)</label>
+              <input type="text" value={newSpec} onChange={e => setNewSpec(e.target.value)} className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-accent" placeholder="e.g. 0.48 kW/TR" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">ราคาประเมิน (Cost Estimate ฿) *</label>
+              <input type="number" required value={newCost} onChange={e => setNewCost(e.target.value)} className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-accent" placeholder="e.g. 4500000" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-muted uppercase tracking-wider mb-1">รายละเอียด (Description)</label>
+              <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-accent resize-none h-20" placeholder="คำอธิบายเพิ่มเติม..." />
+            </div>
+          </div>
+          
+          <div className="pt-2 flex gap-3">
+            {editEqId && (
+              <button type="button" onClick={() => setIsConfirmingDelete(true)} className="px-5 py-3 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold uppercase tracking-wider rounded-xl transition-colors border border-red-200/50 flex items-center justify-center gap-1.5 cursor-pointer shrink-0">
+                <Trash2 size={14} /> ลบ
+              </button>
+            )}
+            <button type="submit" className="flex-1 py-3 bg-accent hover:bg-accent-hover text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-accent/15 flex items-center justify-center cursor-pointer border-none active:scale-[0.98]">
+              {editEqId ? "บันทึกการแก้ไข" : "บันทึกอุปกรณ์ใหม่"}
+            </button>
+          </div>
+        </form>
         )}
       </ModalWrapper>
     </div>

@@ -1,7 +1,8 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
-import { LayoutDashboard, Zap, FileText, Settings, History, LogOut, ShieldCheck, ChevronLeft, ChevronRight, User, Sliders, Sun, Moon, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Zap, FileText, Settings, History, LogOut, ShieldCheck, ChevronLeft, ChevronRight, User as UserIcon, Sliders, Sun, Moon, BookOpen, Factory } from 'lucide-react';
+import logoImg from '../assets/Logo.png';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }) {
   const { user, logout, data, t } = useContext(AppContext);
@@ -36,8 +37,8 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }
         {/* Brand Header */}
         <div className="p-4 pb-4 border-b border-border/50 relative">
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} mb-5 transition-all duration-300`}>
-            <div className="w-9 h-9 rounded-xl bg-accent text-white flex items-center justify-center shrink-0 shadow-md shadow-accent/10">
-              <ShieldCheck size={20} strokeWidth={2.5} />
+            <div className="w-10 h-10 shrink-0 flex items-center justify-center">
+              <img src={logoImg} alt="Logo" className="w-full h-full object-contain drop-shadow-sm" />
             </div>
             {!isCollapsed && (
               <div className="overflow-hidden whitespace-nowrap animate-fade-in">
@@ -73,6 +74,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }
           {!isCollapsed && <div className="text-xs font-bold text-muted/80 px-3 mb-2">{t('main')}</div>}
           
           <NavItem to="/" icon={<LayoutDashboard size={18} />} label={t('dashboard')} count={0} isCollapsed={isCollapsed} />
+          <NavItem to="/factories" icon={<Factory size={18} />} label="Factories" count={data?.factories?.length} isCollapsed={isCollapsed} />
           <NavItem to="/energy" icon={<Zap size={18} />} label={t('energy_summary')} count={data?.measures?.length} isCollapsed={isCollapsed} />
           <NavItem to="/report" icon={<FileText size={18} />} label={t('reports')} count={data?.reports?.length} isCollapsed={isCollapsed} />
           
@@ -86,7 +88,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, toggleCollapse }
 
           {!isCollapsed && <div className="text-xs font-bold text-muted/80 px-3 mb-2 mt-6">{t('preferences')}</div>}
 
-          <NavItem to="/account" icon={<User size={18} />} label={t('account_settings')} isCollapsed={isCollapsed} />
+          <NavItem to="/account" icon={<UserIcon size={18} />} label={t('account_settings')} isCollapsed={isCollapsed} />
           <NavItem to="/system" icon={<Sliders size={18} />} label={t('system_settings')} isCollapsed={isCollapsed} />
         </nav>
 
