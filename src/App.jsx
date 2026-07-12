@@ -1,6 +1,8 @@
 import React, { useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, AppContext } from './context/AppContext';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 
 // Pages & Components
 import Login from './pages/Login';
@@ -17,6 +19,7 @@ import SystemSettings from './pages/SystemSettings';
 import AppLayout from './components/AppLayout';
 import FactoriesList from './pages/FactoriesList';
 import FactoryDetail from './pages/FactoryDetail';
+import AdminPanel from './pages/AdminPanel';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -26,6 +29,14 @@ const ProtectedRoute = ({ children }) => {
 };
 
 export default function App() {
+  React.useEffect(() => {
+    AOS.init({
+      duration: 800,
+      once: true,
+      easing: 'ease-in-out'
+    });
+  }, []);
+
   return (
     <AppProvider>
       <BrowserRouter>
@@ -45,6 +56,7 @@ export default function App() {
             <Route path="system" element={<SystemSettings />} />
             <Route path="factories" element={<FactoriesList />} />
             <Route path="factories/:factoryId" element={<FactoryDetail />} />
+            <Route path="admin" element={<AdminPanel />} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />

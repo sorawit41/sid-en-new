@@ -654,7 +654,8 @@ function ReportPreview({ rpt, onClose, onEdit }) {
         <h2 className="text-sm font-bold text-white bg-slate-800 px-4 py-1.5 rounded-t-lg mb-0 inline-block">ตารางเปรียบเทียบ ก่อน-หลัง ปรับปรุง</h2>
         <div className="w-full h-1 bg-slate-800 mb-4 rounded-r-full"></div>
         
-        <table className="w-full text-xs text-left mb-8 border border-slate-200">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[500px] text-xs text-left mb-8 border border-slate-200">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="p-2 w-1/3">รายการ</th>
@@ -683,6 +684,7 @@ function ReportPreview({ rpt, onClose, onEdit }) {
             </tr>
           </tbody>
         </table>
+        </div>
 
         {/* Section: Photos */}
         {(rpt.before_photos.length > 0 || rpt.after_photos.length > 0) && (

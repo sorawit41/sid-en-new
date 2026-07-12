@@ -9,18 +9,18 @@
     --surface: #ffffff;
     --card: #ffffff;
     --card2: #F7F8F0;
-    
+
     --border: #e2e8f0;
     --border2: #cbd5e1;
     --border-hover: #94a3b8;
-    
+
     --accent: #4988C4;
     --accent-hover: #1C4D8D;
-    
+
     --text: #0F2854;
     --muted: #6b7280;
     --dim: #9ca3af;
-    
+
     --good: #10b981;
     --bad: #ef4444;
     --warn: #f59e0b;
@@ -31,22 +31,29 @@
     --bg: #F0F2F7;
     --surface: #ffffff;
     --card: #ffffff;
-    --card2: #F7F8F0; /* hover background */
-    
-    --border: #f3f4f6; /* gray-100 */
+    --card2: #F7F8F0;
+    /* hover background */
+
+    --border: #f3f4f6;
+    /* gray-100 */
     --border2: #cbd5e1;
     --border-hover: #4988C4;
-    
+
     --accent: #4988C4;
     --accent-hover: #1C4D8D;
-    
+
     --text: #0F2854;
-    --muted: #6b7280; /* gray-500 */
-    --dim: #9ca3af; /* gray-400 */
-    
-    --good: #4ade80; /* green-400 */
-    --bad: #ef4444; /* red-500 */
-    --warn: #fbbf24; /* amber-400 */
+    --muted: #6b7280;
+    /* gray-500 */
+    --dim: #9ca3af;
+    /* gray-400 */
+
+    --good: #4ade80;
+    /* green-400 */
+    --bad: #ef4444;
+    /* red-500 */
+    --warn: #fbbf24;
+    /* amber-400 */
   }
 
   html.dark {
@@ -55,18 +62,18 @@
     --surface: #0b0f19;
     --card: #0f172a;
     --card2: #1e293b;
-    
+
     --border: #1e293b;
     --border2: #334155;
     --border-hover: #475569;
-    
+
     --accent: #BDE8F5;
     --accent-hover: #4988C4;
-    
+
     --text: #f8fafc;
     --muted: #94a3b8;
     --dim: #64748b;
-    
+
     --good: #34d399;
     --bad: #f87171;
     --warn: #fbbf24;
@@ -80,23 +87,36 @@
     font-family: "IBM Plex Sans Thai", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border2);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
+  }
 }
 
 @layer utilities {
   .bg-grid-pattern {
     background-size: 40px 40px;
-    background-image: 
+    background-image:
       linear-gradient(to right, rgba(99, 102, 241, 0.03) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
   }
-  
+
   html.dark .bg-grid-pattern {
-    background-image: 
+    background-image:
       linear-gradient(to right, rgba(129, 140, 248, 0.015) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(129, 140, 248, 0.015) 1px, transparent 1px);
   }
@@ -106,37 +126,38 @@
     background-size: 400% 400%;
     animation: gradientMove 12s ease infinite;
   }
-  
+
   .bg-tech-grid {
-    background-size: 50px 50px; 
+    background-size: 50px 50px;
     background-image:
       linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-    -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
-    mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
+    -webkit-mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 1) 10%, rgba(0, 0, 0, 0) 90%);
+    mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 1) 10%, rgba(0, 0, 0, 0) 90%);
   }
 
   .animate-grid-pan {
     animation: gridPan 4s linear infinite;
   }
+
   @media (min-width: 1024px) {
     .animate-grid-pan {
       animation: none;
     }
   }
 
-  .animate-fade-in { 
-    animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+  .animate-fade-in {
+    animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-  
-  .animate-slide-up { 
-    animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+
+  .animate-slide-up {
+    animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-  
-  .animate-modal-in { 
-    animation: modal-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; 
+
+  .animate-modal-in {
+    animation: modal-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
-  
+
   .animate-draw-progress {
     animation: draw-progress 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -148,42 +169,77 @@
   .hover-lift {
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
+
   .hover-lift:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.15);
   }
-  
+
   html.dark .hover-lift:hover {
     box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.05);
   }
 }
 
-@keyframes fade-in { 
-  from { opacity: 0; } 
-  to { opacity: 1; } 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
-@keyframes slide-up { 
-  from { opacity: 0; transform: translateY(20px); } 
-  to { opacity: 1; transform: translateY(0); } 
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes modal-scale-in {
-  from { opacity: 0; transform: scale(0.95) translateY(12px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 @keyframes draw-progress {
-  from { width: 0%; }
+  from {
+    width: 0%;
+  }
 }
 
 @keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes gridPan {
-  0% { transform: translateY(-50px); }
-  100% { transform: translateY(0px); }
+  0% {
+    transform: translateY(-50px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
 }

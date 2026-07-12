@@ -1,9 +1,20 @@
 import React, { useContext, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Eye, Trash2, Settings, Activity, ArrowRight, Zap, Target, Factory as FactoryIcon, Clock, Snowflake, Wind, Droplets, Flame, Tag, MapPin, AlignLeft, DollarSign } from 'lucide-react';
+import { Plus, Eye, Trash2, Settings, Activity, ArrowRight, Zap, Target, Factory as FactoryIcon, Clock, Snowflake, Wind, Droplets, Flame, Tag, MapPin, AlignLeft, DollarSign, TrendingUp, Leaf } from 'lucide-react';
 import { ModalWrapper } from '../components/Modals';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+
+// Swiper
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination, Navigation, Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/navigation';
+
+// FontAwesome
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faIndustry, faLeaf, faBolt, faChartLine, faTrophy } from '@fortawesome/free-solid-svg-icons';
 
 const iconMap = {
   Snowflake: <Snowflake size={14} />,
@@ -24,7 +35,7 @@ const COLORS = [
   '#10b981', // Emerald
 ];
 
-export const getCategoryBadgeStyle = (catId) => {
+const getCategoryBadgeStyle = (catId) => {
   if (catId === 'chiller') return 'bg-sky-50 text-sky-600 border-sky-200';
   if (catId === 'compressor') return 'bg-violet-50 text-violet-600 border-violet-200';
   if (catId === 'boiler') return 'bg-orange-50 text-orange-600 border-orange-200';
@@ -133,7 +144,7 @@ export default function Dashboard() {
       </div>
 
       {/* Global Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <StatCard title={t('stat_equipments')} value={eqCount} subtitle={lang === 'th' ? 'จำนวนเครื่องจักร' : 'Total Units'} icon={<Settings size={18} />} color="indigo" link="/equip" />
         <StatCard title={t('stat_inspections')} value={insCount} subtitle={lang === 'th' ? 'รายงานที่เสร็จสิ้น' : 'Completed Reports'} icon={<Activity size={18} />} color="blue" link="/history" />
         <StatCard title={t('stat_measures')} value={measCount} subtitle={lang === 'th' ? 'มาตรการที่พบ' : 'Identified Measures'} icon={<Target size={18} />} color="violet" link="/energy" />
@@ -142,9 +153,85 @@ export default function Dashboard() {
         <StatCard title={lang === 'th' ? 'ภาษีคาร์บอน' : 'Carbon Tax'} value={`฿${totalTaxSaved.toLocaleString(undefined, {maximumFractionDigits: 0})}`} subtitle={lang === 'th' ? 'มูลค่าภาษีที่ลดได้' : 'Tax Savings'} icon={<DollarSign size={18} />} color="emerald" />
       </div>
 
-      {/* New Widgets: Trend Chart & Top Opportunities */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Savings Trend Area Chart */}
+
+
+      {/* Hero Stats Summary Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-surface rounded-2xl p-5 border border-border/50 shadow-sm relative overflow-hidden group hover-lift hover:border-accent/30 transition-all" data-aos="fade-up" data-aos-delay="0">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">{t('stat_factories')}</p>
+              <h3 className="text-3xl font-black text-text font-mono">{factoryCount}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent shadow-inner">
+              <FontAwesomeIcon icon={faIndustry} className="text-lg" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-accent relative z-10">
+            <ArrowRight size={14} />
+            <span>{t('view_all')}</span>
+          </div>
+        </div>
+
+        <div className="bg-surface rounded-2xl p-5 border border-border/50 shadow-sm relative overflow-hidden group hover-lift hover:border-blue-500/30 transition-all" data-aos="fade-up" data-aos-delay="100">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">{t('stat_equipments')}</p>
+              <h3 className="text-3xl font-black text-text font-mono">{eqCount}</h3>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner">
+              <Settings size={20} />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-muted relative z-10">
+            <span className="text-text font-bold">{data.cats?.length || 6}</span> categories
+          </div>
+        </div>
+
+        <div className="bg-surface rounded-2xl p-5 border border-border/50 shadow-sm relative overflow-hidden group hover-lift hover:border-emerald-500/30 transition-all" data-aos="fade-up" data-aos-delay="200">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">{t('stat_savings')}</p>
+              <div className="flex items-baseline gap-1">
+                <h3 className="text-3xl font-black text-emerald-500 font-mono">{(totalKWh / 1000).toFixed(0)}</h3>
+                <span className="text-xs font-bold text-muted">MWh/yr</span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shadow-inner">
+              <FontAwesomeIcon icon={faBolt} className="text-lg" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-md w-fit relative z-10">
+            <TrendingUp size={12} />
+            <span className="font-bold">฿{Math.round(totalTaxSaved).toLocaleString()}</span> {lang === 'th' ? 'ภาษีคาร์บอนที่ลดได้' : 'Tax Saved'}
+          </div>
+        </div>
+
+        <div className="bg-surface rounded-2xl p-5 border border-border/50 shadow-sm relative overflow-hidden group hover-lift hover:border-teal-500/30 transition-all" data-aos="fade-up" data-aos-delay="300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">{t('stat_co2')}</p>
+              <div className="flex items-baseline gap-1">
+                <h3 className="text-3xl font-black text-teal-500 font-mono">{(totalCo2Saved / 1000).toFixed(1)}</h3>
+                <span className="text-xs font-bold text-muted">tCO₂e</span>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-500 shadow-inner">
+              <FontAwesomeIcon icon={faLeaf} className="text-lg" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-1.5 text-xs font-medium text-muted relative z-10">
+            <span className="text-text font-bold">{measCount}</span> measures implemented
+          </div>
+        </div>
+      </div>
+
+      {/* Charts & Top lists */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8" data-aos="fade-up" data-aos-delay="400">
         <div className="lg:col-span-2 bg-surface border border-border rounded-xl p-5 shadow-sm">
           <h3 className="text-sm font-bold text-text mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -184,15 +271,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top Opportunities */}
         <div className="bg-surface border border-border rounded-xl p-5 shadow-sm flex flex-col">
           <h3 className="text-sm font-bold text-text mb-4 flex items-center gap-2">
-            <Zap size={16} className="text-warn" />
+            <FontAwesomeIcon icon={faTrophy} className="text-warn" />
             {lang === 'th' ? 'โอกาสในการประหยัดสูงสุด' : 'Top Savings Opportunities'}
           </h3>
           <div className="flex-1 space-y-3">
             {topOpportunities.length > 0 ? topOpportunities.map((opp, i) => {
-              const cat = data.cats.find(c => c.id === opp.catId);
               return (
                 <div key={opp.id} className="p-3 bg-card2 border border-border/40 rounded-xl flex items-center justify-between hover:border-accent/40 transition-colors cursor-default group">
                   <div className="flex items-center gap-3">
@@ -222,10 +307,48 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Factory Breakdown */}
-      <div>
+      {/* Activity Feed / Alerts */}
+      <div className="mb-8" data-aos="fade-up" data-aos-delay="450">
+        <h3 className="text-base font-bold text-text flex items-center gap-2 mb-4">
+          <Activity size={18} className="text-accent" />
+          {lang === 'th' ? 'การตรวจวัดและแจ้งเตือนล่าสุด' : 'Recent Activities & Alerts'}
+        </h3>
+        <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
+          <div className="divide-y divide-border/60">
+            {data.inspections?.length > 0 ? data.inspections.slice(0, 5).map((ins, idx) => {
+              const eq = data.equipments.find(e => e.id === ins.eqId);
+              return (
+                <div key={ins.id} className="p-4 hover:bg-card2 transition-colors flex items-start gap-4 group cursor-pointer">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 border border-blue-500/20 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                    <Activity size={18} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 justify-between">
+                      <h4 className="text-sm font-bold text-text truncate group-hover:text-accent transition-colors">
+                        {eq ? eq.tag : 'System'} {eq && `- ${eq.factory}`}
+                      </h4>
+                      <span className="text-[10px] text-muted font-medium whitespace-nowrap bg-bg border border-border px-2 py-0.5 rounded-full">
+                        {new Date(ins.date).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted mt-1.5 line-clamp-2">{ins.summary}</p>
+                  </div>
+                </div>
+              );
+            }) : (
+              <div className="p-8 text-center text-muted">
+                <p className="text-sm font-medium">{lang === 'th' ? 'ไม่มีการเคลื่อนไหวใหม่' : 'No recent activities'}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Factory Breakdown using Swiper */}
+      <div data-aos="fade-up" data-aos-delay="500">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-text">
+          <h3 className="text-base font-bold text-text flex items-center gap-2">
+            <FontAwesomeIcon icon={faIndustry} className="text-accent" />
             {t('factories_overview')}
           </h3>
           <button 
@@ -236,79 +359,87 @@ export default function Dashboard() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {factories.length > 0 ? factories.map((fact, idx) => {
-            const factoryName = fact.name;
-            const fEqs = data.equipments.filter(e => e.factory === factoryName);
-            const fEqIds = fEqs.map(e => e.id);
-            const fIns = data.inspections.filter(i => fEqIds.includes(i.eqId));
-            const fMeas = data.measures.filter(m => fEqIds.includes(m.eqId));
-            
-            const fKWh = fMeas.reduce((a, m) => a + (m.kWhYear || 0), 0);
-
-            // Find unique categories for this factory
-            const fCatIds = [...new Set(fEqs.map(e => e.catId))];
-            const fCats = data.cats.filter(c => fCatIds.includes(c.id));
-            
-            const color = COLORS[idx % COLORS.length];
-            
-            return (
-              <Link 
-                key={factoryName} 
-                to={`/factories/${fact.id}`} 
-                className="block bg-surface border border-border rounded-xl p-5 hover-lift relative overflow-hidden group cursor-pointer hover:border-accent/40"
-              >
-                <div className="flex justify-between items-start mb-4 mt-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent/10 text-accent border border-accent/20 shrink-0 shadow-sm">
-                      <FactoryIcon size={18} />
+        <div className="pb-8">
+          <Swiper
+            modules={[Pagination, Navigation, Autoplay]}
+            spaceBetween={20}
+            slidesPerView={1}
+            breakpoints={{
+              640: { slidesPerView: 2 },
+              1024: { slidesPerView: 3 },
+            }}
+            pagination={{ clickable: true }}
+            autoplay={{ delay: 5000, disableOnInteraction: false }}
+            className="px-2 pb-10"
+          >
+            {factories.length > 0 ? factories.map((fact, idx) => {
+              const factoryName = fact.name;
+              const fEqs = data.equipments.filter(e => e.factory === factoryName);
+              const fEqIds = fEqs.map(e => e.id);
+              const fIns = data.inspections.filter(i => fEqIds.includes(i.eqId));
+              const fMeas = data.measures.filter(m => fEqIds.includes(m.eqId));
+              
+              const fKWh = fMeas.reduce((a, m) => a + (m.kWhYear || 0), 0);
+              const fCatIds = [...new Set(fEqs.map(e => e.catId))];
+              const fCats = data.cats.filter(c => fCatIds.includes(c.id));
+              
+              return (
+                <SwiperSlide key={factoryName}>
+                  <Link 
+                    to={`/factories/${fact.id}`} 
+                    className="block h-full bg-surface border border-border rounded-xl p-5 hover:shadow-md relative overflow-hidden group cursor-pointer hover:border-accent/40 transition-all"
+                  >
+                    <div className="flex justify-between items-start mb-4 mt-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent/10 text-accent border border-accent/20 shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                          <FontAwesomeIcon icon={faIndustry} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-text text-[15px] line-clamp-1 group-hover:text-accent transition-colors" title={factoryName}>{factoryName}</h4>
+                          <p className="text-xs text-muted font-medium mt-0.5">{fEqs.length} {t('stat_equipments')}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-text text-[15px] line-clamp-1 group-hover:text-accent transition-colors" title={factoryName}>{factoryName}</h4>
-                      <p className="text-xs text-muted font-medium mt-0.5">{fEqs.length} {t('stat_equipments')}</p>
+                    
+                    <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-card2 border border-border/40 rounded-xl">
+                      <div className="text-center">
+                        <div className="text-[9px] text-muted font-bold uppercase tracking-wider mb-1">{t('stat_inspections')}</div>
+                        <div className="font-mono text-xs font-bold text-text">{fIns.length}</div>
+                      </div>
+                      <div className="text-center border-l border-r border-border/50">
+                        <div className="text-[9px] text-muted font-bold uppercase tracking-wider mb-1">{t('stat_measures')}</div>
+                        <div className="font-mono text-xs font-bold text-accent">{fMeas.length}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-[9px] text-muted font-bold uppercase tracking-wider mb-1">{t('savings_mwh')}</div>
+                        <div className="font-mono text-xs font-bold text-emerald-500">{(fKWh/1000).toFixed(0)}</div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-card2 border border-border/40 rounded-xl">
-                  <div className="text-center">
-                    <div className="text-[9px] text-muted font-bold uppercase tracking-wider mb-1">{t('stat_inspections')}</div>
-                    <div className="font-mono text-xs font-bold text-text">{fIns.length}</div>
-                  </div>
-                  <div className="text-center border-l border-r border-border/50">
-                    <div className="text-[9px] text-muted font-bold uppercase tracking-wider mb-1">{t('stat_measures')}</div>
-                    <div className="font-mono text-xs font-bold text-accent">{fMeas.length}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[9px] text-muted font-bold uppercase tracking-wider mb-1">{t('savings_mwh')}</div>
-                    <div className="font-mono text-xs font-bold text-emerald-500">{(fKWh/1000).toFixed(0)}</div>
-                  </div>
-                </div>
 
-                {fCats.length > 0 ? (
-                  <div className="pt-1">
-                    <div className="text-[9px] font-bold text-muted uppercase tracking-wider mb-2">{t('categories_present')}</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {fCats.map(c => (
-                        <span key={c.id} className={`flex items-center gap-1 px-2 py-0.5 border rounded-lg text-[10px] font-semibold ${getCategoryBadgeStyle(c.id)}`} title={c.name}>
-                          {iconMap[c.icon] || <Settings size={10} />} {c.name}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {fCats.slice(0,3).map(c => (
+                        <span key={c.id} className={`text-[9px] px-2 py-0.5 rounded-full font-semibold border flex items-center gap-1 ${getCategoryBadgeStyle(c.id)}`}>
+                          {iconMap[c.icon] || <Settings size={8} />}
+                          {c.name}
                         </span>
                       ))}
+                      {fCats.length > 3 && (
+                        <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold bg-bg text-muted border border-border/40">
+                          +{fCats.length - 3}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-[10px] text-muted italic pt-1">
-                    {lang === 'th' ? 'ไม่มีประวัติเครื่องจักร' : 'No equipments registered'}
-                  </div>
-                )}
-              </Link>
-            );
-          }) : (
-            <div className="col-span-full p-12 border-2 border-dashed border-border rounded-2xl text-center text-muted">
-              <FactoryIcon size={32} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm font-semibold">{t('no_factories')}</p>
-            </div>
-          )}
+                  </Link>
+                </SwiperSlide>
+              );
+            }) : (
+              <div className="col-span-full py-10 flex flex-col items-center justify-center text-muted border-2 border-dashed border-border/50 rounded-xl bg-card2/50">
+                <FactoryIcon size={32} className="mb-2 opacity-30" />
+                <p className="text-sm font-medium">{t('no_factories')}</p>
+                <p className="text-xs opacity-60 mt-1">{t('add_factory_to_start')}</p>
+              </div>
+            )}
+          </Swiper>
         </div>
       </div>
 
@@ -452,35 +583,36 @@ export default function Dashboard() {
 
 function StatCard({ title, value, subtitle, icon, color, link }) {
   const cMap = {
-    indigo: { text: 'text-accent', bg: 'bg-accent/10 border-accent/20' },
-    blue: { text: 'text-accent', bg: 'bg-accent/10 border-accent/20' },
-    violet: { text: 'text-accent', bg: 'bg-accent/10 border-accent/20' },
-    amber: { text: 'text-warn', bg: 'bg-warn/10 border-warn/25' },
-    emerald: { text: 'text-good', bg: 'bg-good/10 border-good/25' },
+    indigo: { text: 'text-accent', bg: 'bg-accent/10 border-accent/20', hoverFrom: 'from-accent/0', hoverTo: 'to-accent/5' },
+    blue: { text: 'text-accent', bg: 'bg-accent/10 border-accent/20', hoverFrom: 'from-accent/0', hoverTo: 'to-accent/5' },
+    violet: { text: 'text-accent', bg: 'bg-accent/10 border-accent/20', hoverFrom: 'from-accent/0', hoverTo: 'to-accent/5' },
+    amber: { text: 'text-warn', bg: 'bg-warn/10 border-warn/25', hoverFrom: 'from-warn/0', hoverTo: 'to-warn/10' },
+    emerald: { text: 'text-good', bg: 'bg-good/10 border-good/25', hoverFrom: 'from-good/0', hoverTo: 'to-good/10' },
   };
 
   const style = cMap[color] || cMap.indigo;
 
   const content = (
     <>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-bold text-muted uppercase tracking-wider">{title}</span>
-        <div className={`p-1.5 rounded-lg border ${style.bg} ${style.text} shrink-0`}>
+      <div className={`absolute inset-0 bg-gradient-to-br ${style.hoverFrom} ${style.hoverTo} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-xl`} />
+      <div className="flex items-center justify-between mb-3 relative z-10">
+        <span className="text-xs font-bold text-muted uppercase tracking-wider group-hover:text-text transition-colors">{title}</span>
+        <div className={`p-1.5 rounded-lg border ${style.bg} ${style.text} shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-300`}>
           {icon}
         </div>
       </div>
-      <div className="mt-2">
-        <div className="text-2xl font-bold text-text font-mono tracking-tight">{value}</div>
+      <div className="mt-2 relative z-10">
+        <div className="text-2xl font-bold text-text font-mono tracking-tight group-hover:translate-x-1 transition-transform duration-300">{value}</div>
         {subtitle && <div className="text-[10px] text-muted font-medium mt-1">{subtitle}</div>}
       </div>
     </>
   );
 
-  const className = "bg-surface border border-border rounded-xl p-5 flex flex-col justify-between hover-lift group";
+  const className = "bg-surface border border-border rounded-xl p-5 flex flex-col justify-between group relative overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-accent/5 hover:border-accent/40";
 
   if (link) {
     return (
-      <Link to={link} className={`${className} hover:border-accent/50 cursor-pointer block`}>
+      <Link to={link} className={`${className} cursor-pointer block`}>
         {content}
       </Link>
     );

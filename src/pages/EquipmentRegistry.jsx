@@ -406,9 +406,36 @@ export default function EquipmentRegistry() {
           })}
         </div>
       ) : (
-        <div className="text-center py-16 bg-surface border border-dashed border-border rounded-2xl">
-          <Settings size={36} className="mx-auto text-muted opacity-30 mb-3" />
-          <p className="text-xs font-bold text-muted">{t('no_equipments')}</p>
+        <div className="flex flex-col items-center justify-center py-20 bg-surface border-2 border-dashed border-border/40 rounded-2xl space-y-4 animate-fade-in">
+          <div className="w-16 h-16 rounded-2xl bg-card2 border border-border/60 flex items-center justify-center">
+            <Settings size={28} className="text-muted opacity-40" />
+          </div>
+          <div className="text-center">
+            <p className="text-base font-bold text-text mb-1">
+              {lang === 'th' ? 'ไม่พบอุปกรณ์' : 'No Equipment Found'}
+            </p>
+            <p className="text-xs text-muted">
+              {search || filterCat || selectedSubCat
+                ? (lang === 'th' ? 'ลองเปลี่ยนตัวกรองหรือล้างการค้นหา' : 'Try adjusting your filters or search')
+                : (lang === 'th' ? 'เริ่มต้นด้วยการเพิ่มอุปกรณ์ชิ้นแรก' : 'Start by adding your first equipment')}
+            </p>
+          </div>
+          {!search && !filterCat && !selectedSubCat && (
+            <button
+              onClick={() => setIsAddOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accentHover text-white text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer border-none shadow-sm"
+            >
+              <Plus size={14} /> {t('add_equipment')}
+            </button>
+          )}
+          {(search || filterCat || selectedSubCat) && (
+            <button
+              onClick={() => { setSearch(''); setFilterCat(''); setSelectedSubCat(''); }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-card2 hover:bg-border text-muted text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer border border-border"
+            >
+              {t('clear_filter')}
+            </button>
+          )}
         </div>
       )}
 

@@ -263,12 +263,12 @@ export default function FactoryDetail() {
         <div className="bg-surface border border-border rounded-xl p-6 shadow-sm relative overflow-hidden group transition-all duration-300 hover:border-accent/40 animate-fade-in flex flex-col lg:flex-row gap-6">
           
           {/* Left Block: Stats Cards */}
-          <div className="flex-1 space-y-4">
+          <div className="flex-1 space-y-4 min-w-0">
             <h3 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-2">
               <span className="w-1.5 h-3 bg-accent rounded-full" /> {t ? t('factory_summary_title') : 'FACTORY PERFORMANCE DASHBOARD'} ({factoryParam})
             </h3>
             
-            <div className="grid grid-cols-2 gap-4 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <div className="p-4 bg-card2 border border-border/40 rounded-xl">
                 <span className="text-[10px] text-muted font-bold uppercase tracking-wider block">{t ? t('total_machines_label') : 'ACTIVE EQUIPMENTS'}</span>
                 <span className="text-xl font-bold text-text font-mono block mt-1">{factoryDashboardStats.totalEquips}</span>
@@ -377,7 +377,7 @@ export default function FactoryDetail() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border/50">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border/50">
           <div className="p-3.5 bg-card2 rounded-xl border border-border/40">
             <div className="text-[9px] font-bold uppercase tracking-wider text-muted">{lang === 'th' ? 'รวมที่บันทึก' : 'Total Recorded'}</div>
             <div className="text-base font-bold text-text font-mono mt-1">{totalKWhRecorded.toLocaleString()} <span className="text-[9px] font-sans text-muted">kWh</span></div>
@@ -649,7 +649,7 @@ export default function FactoryDetail() {
 
         {/* Summary totals */}
         {budgetPlan.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-border/50">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-border/50">
             <div className="p-3.5 bg-accent/10 rounded-xl border border-accent/20">
               <div className="text-[9px] font-bold uppercase tracking-wider text-accent">{lang === 'th' ? 'เครื่องที่เลือก' : 'Items Selected'}</div>
               <div className="text-sm font-bold text-accent font-mono mt-1">{budgetPlan.length} {lang === 'th' ? 'เครื่อง' : 'units'}</div>
@@ -680,7 +680,7 @@ export default function FactoryDetail() {
             {lang === 'th' ? 'สรุปจำนวนเครื่องจักรตามประเภท' : 'Equipment Category Breakdown'}
           </h3>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {/* All card option */}
             <div 
               onClick={() => setSelectedSubCat('')}

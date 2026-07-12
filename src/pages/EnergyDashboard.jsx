@@ -126,7 +126,7 @@ export default function EnergyDashboard() {
       </div>
 
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard icon={<Zap size={18} />} label={t('elec_savings')} val={fmt(totalElec/1000, 1)} unit="MWh/yr" color="blue" />
         <StatCard icon={<Flame size={18} />} label={t('heat_savings')} val={fmt(totalHeat*MJ_PER_KWH/1000, 1)} unit="GJ/yr" color="amber" />
         <StatCard icon={<LeafyGreen size={18} />} label={t('ghg_reduction')} val={fmt(totalGHG, 1)} unit="tCO₂e/yr" color="emerald" />

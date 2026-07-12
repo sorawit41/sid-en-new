@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 
 const DEFAULT_CATS = [
   {id:'chiller',   name:'Chiller',       desc:'ระบบทำน้ำเย็น Centrifugal, Screw, Scroll', icon:'Snowflake'},
@@ -20,16 +20,50 @@ const DEFAULT_SETTINGS = {
   theme: 'System Default',
   language: 'English (US)',
   carbonTaxRate: 200,
+  elecRate: 4.2,
   emailAlerts: true,
   lineNotify: false,
   emissionFactors: [
     { id: 'ef_elec', name: 'Electricity (Grid mix)', unit: 'kWh', value: 0.5562, source: 'TGO 2024' },
     { id: 'ef_water', name: 'Tap Water', unit: 'm3', value: 0.7836, source: 'TGO 2024' }
+  ],
+  unitMaster: [
+    { id: 'um_1', name: 'Temperature', units: [
+      { symbol: '°F', label: 'Fahrenheit', toBase: 'x', fromBase: 'x' },
+      { symbol: '°C', label: 'Celsius', toBase: '(x-32)*5/9', fromBase: 'x*9/5+32' }
+    ], defaultUnit: '°F' },
+    { id: 'um_2', name: 'Flow Rate', units: [
+      { symbol: 'GPM', label: 'Gallons per Minute', toBase: 'x', fromBase: 'x' },
+      { symbol: 'm³/hr', label: 'Cubic Meters per Hour', toBase: 'x*0.2271', fromBase: 'x/0.2271' }
+    ], defaultUnit: 'GPM' },
+    { id: 'um_3', name: 'Pressure', units: [
+      { symbol: 'bar', label: 'Bar', toBase: 'x', fromBase: 'x' },
+      { symbol: 'psi', label: 'PSI', toBase: 'x*14.5038', fromBase: 'x/14.5038' },
+      { symbol: 'kPa', label: 'Kilopascal', toBase: 'x*100', fromBase: 'x/100' }
+    ], defaultUnit: 'bar' },
+    { id: 'um_4', name: 'Power', units: [
+      { symbol: 'kW', label: 'Kilowatt', toBase: 'x', fromBase: 'x' },
+      { symbol: 'HP', label: 'Horsepower', toBase: 'x*0.7457', fromBase: 'x/0.7457' }
+    ], defaultUnit: 'kW' }
   ]
 };
 
+const DEFAULT_USERS = [
+  { id: 'usr_admin', name: 'Admin User', email: 'admin@enginspect.com', password: 'admin1234', role: 'admin', initials: 'AD', position: 'System Administrator', assignedFactories: [] },
+  { id: 'usr_1', name: 'วิศวกร สมชาย', email: 'somchai@example.com', password: 'eng1234', role: 'engineer', initials: 'สช', position: 'Energy Engineer', assignedFactories: ['f_1', 'f_2'] },
+  { id: 'usr_2', name: 'นาย ทดสอบ', email: 'demo@example.com', password: 'demo1234', role: 'engineer', initials: 'ทส', position: 'Field Engineer', assignedFactories: ['f_3'] }
+];
+
+// Measure type constants
+export const MEASURE_TYPES = [
+  { id: 'housekeeping', label: 'Housekeeping', labelTh: 'Housekeeping (ไม่ลงทุน)', color: 'green', desc: 'No investment required – cleaning, adjustment, settings' },
+  { id: 'minor', label: 'Minor Improvement', labelTh: 'Minor (ปรับเล็กน้อย)', color: 'amber', desc: 'Small investment – VSD, controls, minor modifications' },
+  { id: 'major', label: 'Major Investment', labelTh: 'Major (เปลี่ยนอุปกรณ์ใหญ่)', color: 'red', desc: 'Large capital investment – replace equipment, new systems' },
+];
+
 const DEFAULT_DATA = {
   settings: DEFAULT_SETTINGS,
+  users: DEFAULT_USERS,
   cats: DEFAULT_CATS,
   factories: DEFAULT_FACTORIES,
   equipments: [
@@ -65,14 +99,14 @@ const DEFAULT_DATA = {
     { id: 'ins_12', eqId: 'eq_15', catId: 'pump', date: '2026-04-20T10:45:00Z', summary: 'มีจุดรั่วซึมบริเวณประเก็นกันรั่ว (Gland Packing) ของปั๊มน้ำทำให้น้ำสูญเสียเล็กน้อย' }
   ],
   measures: [
-    { id: 'meas_1', eqId: 'eq_1', eqTag: 'CH-01', catId: 'chiller', factory: 'โรงงานอยุธยา', measName: 'ล้างทำความสะอาดคอนเดนเซอร์ทิวบ์', measIcon: '🧹', pct: 12, kWhYear: 156000, bahtYear: 624000, invest: 25000, payback: 0.04, energyType: 'elec', date: '2025-11-15', energyUseBefore: 1560000, energyUseAfter: 1404000, costBefore: 6552000, costAfter: 5928000, co2Before: 780000, co2After: 702000 },
-    { id: 'meas_2', eqId: 'eq_2', eqTag: 'AC-02', catId: 'compressor', factory: 'โรงงานอยุธยา', measName: 'อุดรอยรั่วท่อลมและท่อจ่ายลมอัดหลัก', measIcon: '🔧', pct: 18, kWhYear: 95000, bahtYear: 380000, invest: 45000, payback: 0.12, energyType: 'elec', date: '2025-12-02', energyUseBefore: 432000, energyUseAfter: 337000, costBefore: 1814400, costAfter: 1434400, co2Before: 216000, co2After: 168500 },
-    { id: 'meas_3', eqId: 'eq_4', eqTag: 'BL-01', catId: 'boiler', factory: 'โรงงานชลบุรี', measName: 'ติดตั้งเครื่องประหยัดความร้อน (Economizer)', measIcon: '🔥', pct: 6, kWhYear: 310000, bahtYear: 1085000, invest: 1200000, payback: 1.11, energyType: 'heat', date: '2026-02-10', energyUseBefore: 5166666, energyUseAfter: 4856666, costBefore: 18083333, costAfter: 16998333, co2Before: 1200000, co2After: 1100000 },
-    { id: 'meas_4', eqId: 'eq_3', eqTag: 'CH-02', catId: 'chiller', factory: 'โรงงานชลบุรี', measName: 'ติดตั้งอินเวอร์เตอร์ (VSD) สำหรับปั๊มน้ำเย็น', measIcon: '⚡', pct: 15, kWhYear: 245000, bahtYear: 980000, invest: 850000, payback: 0.87, energyType: 'elec', date: '2026-01-20', energyUseBefore: 2968000, energyUseAfter: 2723000, costBefore: 12465600, costAfter: 11485600, co2Before: 1484000, co2After: 1361500 },
-    { id: 'meas_5', eqId: 'eq_6', eqTag: 'CT-01', catId: 'cooling', factory: 'โรงงานอยุธยา', measName: 'ล้างทำความสะอาดและเปลี่ยนตะแกรงกระจายลมคูลลิ่ง', measIcon: '💧', pct: 8, kWhYear: 35000, bahtYear: 140000, invest: 80000, payback: 0.57, energyType: 'elec', date: '2025-12-20', energyUseBefore: 144540, energyUseAfter: 109540, costBefore: 607068, costAfter: 467068, co2Before: 72270, co2After: 54770 },
-    { id: 'meas_6', eqId: 'eq_10', eqTag: 'AC-03', catId: 'compressor', factory: 'โรงงานระยอง', measName: 'ลดระดับความดันจ่ายลมอัดของเครื่องอัดลมลง 0.5 bar', measIcon: '📉', pct: 4, kWhYear: 58000, bahtYear: 232000, invest: 10000, payback: 0.04, energyType: 'elec', date: '2026-03-15', energyUseBefore: 704000, energyUseAfter: 646000, costBefore: 2956800, costAfter: 2724800, co2Before: 352000, co2After: 323000 },
-    { id: 'meas_7', eqId: 'eq_11', eqTag: 'BL-02', catId: 'boiler', factory: 'โรงงานระยอง', measName: 'ล้างตะกรันในหม้อไอน้ำเพื่อเพิ่มการส่งผ่านความร้อน', measIcon: '🧪', pct: 5, kWhYear: 142000, bahtYear: 497000, invest: 150000, payback: 0.30, energyType: 'heat', date: '2026-04-05', energyUseBefore: 2840000, energyUseAfter: 2698000, costBefore: 9940000, costAfter: 9443000, co2Before: 568000, co2After: 539600 },
-    { id: 'meas_8', eqId: 'eq_13', eqTag: 'CH-04', catId: 'chiller', factory: 'โรงงานสมุทรปราการ', measName: 'เปลี่ยนมาใช้สารทำความเย็นที่เป็นมิตรต่อสิ่งแวดล้อม', measIcon: '🌿', pct: 7, kWhYear: 108000, bahtYear: 432000, invest: 350000, payback: 0.81, energyType: 'elec', date: '2026-04-12', energyUseBefore: 1366560, energyUseAfter: 1258560, costBefore: 5739552, costAfter: 5307552, co2Before: 683280, co2After: 629280 }
+    { id: 'meas_1', eqId: 'eq_1', eqTag: 'CH-01', catId: 'chiller', factory: 'โรงงานอยุธยา', measName: 'ล้างทำความสะอาดคอนเดนเซอร์ทิวบ์', measType: 'housekeeping', measIcon: '🧹', pct: 12, kWhYear: 156000, bahtYear: 624000, invest: 25000, payback: 0.04, energyType: 'elec', date: '2025-11-15', status: 'completed', energyUseBefore: 1560000, energyUseAfter: 1404000, costBefore: 6552000, costAfter: 5928000, co2Before: 780000, co2After: 702000, beforePhotos: [], afterPhotos: [] },
+    { id: 'meas_2', eqId: 'eq_2', eqTag: 'AC-02', catId: 'compressor', factory: 'โรงงานอยุธยา', measName: 'อุดรอยรั่วท่อลมและท่อจ่ายลมอัดหลัก', measType: 'housekeeping', measIcon: '🔧', pct: 18, kWhYear: 95000, bahtYear: 380000, invest: 45000, payback: 0.12, energyType: 'elec', date: '2025-12-02', status: 'in_progress', energyUseBefore: 432000, energyUseAfter: 337000, costBefore: 1814400, costAfter: 1434400, co2Before: 216000, co2After: 168500, beforePhotos: [], afterPhotos: [] },
+    { id: 'meas_3', eqId: 'eq_4', eqTag: 'BL-01', catId: 'boiler', factory: 'โรงงานชลบุรี', measName: 'ติดตั้งเครื่องประหยัดความร้อน (Economizer)', measType: 'major', measIcon: '🔥', pct: 6, kWhYear: 310000, bahtYear: 1085000, invest: 1200000, payback: 1.11, energyType: 'heat', date: '2026-02-10', status: 'in_progress', energyUseBefore: 5166666, energyUseAfter: 4856666, costBefore: 18083333, costAfter: 16998333, co2Before: 1200000, co2After: 1100000, beforePhotos: [], afterPhotos: [] },
+    { id: 'meas_4', eqId: 'eq_3', eqTag: 'CH-02', catId: 'chiller', factory: 'โรงงานชลบุรี', measName: 'ติดตั้งอินเวอร์เตอร์ (VSD) สำหรับปั๊มน้ำเย็น', measType: 'minor', measIcon: '⚡', pct: 15, kWhYear: 245000, bahtYear: 980000, invest: 850000, payback: 0.87, energyType: 'elec', date: '2026-01-20', status: 'completed', energyUseBefore: 2968000, energyUseAfter: 2723000, costBefore: 12465600, costAfter: 11485600, co2Before: 1484000, co2After: 1361500, beforePhotos: [], afterPhotos: [] },
+    { id: 'meas_5', eqId: 'eq_6', eqTag: 'CT-01', catId: 'cooling', factory: 'โรงงานอยุธยา', measName: 'ล้างทำความสะอาดและเปลี่ยนตะแกรงกระจายลมคูลลิ่ง', measType: 'housekeeping', measIcon: '💧', pct: 8, kWhYear: 35000, bahtYear: 140000, invest: 80000, payback: 0.57, energyType: 'elec', date: '2025-12-20', status: 'completed', energyUseBefore: 144540, energyUseAfter: 109540, costBefore: 607068, costAfter: 467068, co2Before: 72270, co2After: 54770, beforePhotos: [], afterPhotos: [] },
+    { id: 'meas_6', eqId: 'eq_10', eqTag: 'AC-03', catId: 'compressor', factory: 'โรงงานระยอง', measName: 'ลดระดับความดันจ่ายลมอัดลง 0.5 bar', measType: 'housekeeping', measIcon: '📉', pct: 4, kWhYear: 58000, bahtYear: 232000, invest: 10000, payback: 0.04, energyType: 'elec', date: '2026-03-15', status: 'completed', energyUseBefore: 704000, energyUseAfter: 646000, costBefore: 2956800, costAfter: 2724800, co2Before: 352000, co2After: 323000, beforePhotos: [], afterPhotos: [] },
+    { id: 'meas_7', eqId: 'eq_11', eqTag: 'BL-02', catId: 'boiler', factory: 'โรงงานระยอง', measName: 'ล้างตะกรันหม้อไอน้ำเพิ่มการส่งผ่านความร้อน', measType: 'minor', measIcon: '🧪', pct: 5, kWhYear: 142000, bahtYear: 497000, invest: 150000, payback: 0.30, energyType: 'heat', date: '2026-04-05', status: 'in_progress', energyUseBefore: 2840000, energyUseAfter: 2698000, costBefore: 9940000, costAfter: 9443000, co2Before: 568000, co2After: 539600, beforePhotos: [], afterPhotos: [] },
+    { id: 'meas_8', eqId: 'eq_13', eqTag: 'CH-04', catId: 'chiller', factory: 'โรงงานสมุทรปราการ', measName: 'เปลี่ยนสารทำความเย็นเป็นมิตรต่อสิ่งแวดล้อม', measType: 'major', measIcon: '🌿', pct: 7, kWhYear: 108000, bahtYear: 432000, invest: 350000, payback: 0.81, energyType: 'elec', date: '2026-04-12', status: 'in_progress', energyUseBefore: 1366560, energyUseAfter: 1258560, costBefore: 5739552, costAfter: 5307552, co2Before: 683280, co2After: 629280, beforePhotos: [], afterPhotos: [] }
   ],
   reports: [
     { id: 'rpt_1', eqId: 'eq_1', title: 'รายงานผลการตรวจวัดและล้างตะกรันคอนเดนเซอร์เครื่องทำน้ำเย็น CH-01', docno: 'EA-2025-001', factory: 'โรงงานอยุธยา', dept: 'อาคารผลิต 1', source: 'การตรวจวัดและวิเคราะห์ประสิทธิภาพ', meastype: 'No/Low Cost', objective: 'เพื่อปรับปรุงอัตราการถ่ายเทความร้อนและลดกำลังไฟฟ้าของคอมเพรสเซอร์', equip_main: 'CH-01 - Trane CVGF', before_kw: 320, before_hrs: 6500, after_kw: 296, after_hrs: 6500, save_kwh: 156000, save_baht: 624000, invest: 25000, payback: 0.04, conclusion: 'จากการเข้าตรวจสอบประสิทธิภาพพบว่าการแลกเปลี่ยนความร้อนเพิ่มขึ้นและสามารถประหยัดกำลังไฟได้ 24 kW ระยะคืนทุนเพียง 0.04 ปี แนะนำให้ดำเนินล้างปีละ 1 ครั้ง', updatedAt: '2025-11-20T10:00:00Z', before_photos: [], after_photos: [] },
@@ -110,6 +144,9 @@ const TRANSLATIONS = {
     invalid_login: "Invalid email or password.",
     
     // Dashboard
+    dashboard_title: "Energy Overview",
+    dashboard_subtitle: "Real-time energy consumption and savings",
+    dashboard_desc: "Industrial Energy Management System",
     hello: "Hello",
     overview_for: "Overview for",
     factories_overview: "Factories Overview",
@@ -120,6 +157,8 @@ const TRANSLATIONS = {
     stat_measures: "Measures",
     stat_potential: "Potential (MWh)",
     stat_factories: "Factories",
+    stat_savings: "Energy Savings",
+    stat_co2: "CO2 Reduction",
     savings_mwh: "Savings (MWh)",
     categories_present: "Categories present:",
     no_factories: "No factories found. Please add equipment first.",
@@ -355,6 +394,9 @@ const TRANSLATIONS = {
     invalid_login: "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
     
     // Dashboard
+    dashboard_title: "สรุปศักยภาพการประหยัดพลังงาน",
+    dashboard_subtitle: "ภาพรวมโอกาสและผลประหยัดที่ค้นพบจากทุกสาขา",
+    dashboard_desc: "ระบบบริหารจัดการพลังงานอุตสาหกรรม",
     hello: "สวัสดี",
     overview_for: "ภาพรวมสำหรับ",
     factories_overview: "ภาพรวมโรงงาน",
@@ -365,6 +407,8 @@ const TRANSLATIONS = {
     stat_measures: "มาตรการรวม",
     stat_potential: "ศักยภาพประหยัด (MWh)",
     stat_factories: "จำนวนโรงงาน",
+    stat_savings: "พลังงานที่ลดได้",
+    stat_co2: "ลดการปล่อย CO2",
     savings_mwh: "ผลประหยัด (MWh)",
     categories_present: "ประเภทเครื่องจักร:",
     no_factories: "ไม่พบข้อมูลโรงงาน กรุณาเพิ่มอุปกรณ์ก่อน",
@@ -581,6 +625,7 @@ export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [lang, setLang] = useState('en');
+  const [currentFactoryId, setCurrentFactoryId] = useState(null);
 
   useEffect(() => {
     const savedData = localStorage.getItem('ei_data4_min');
@@ -633,9 +678,20 @@ export const AppProvider = ({ children }) => {
         console.error("Failed to parse ei_user", e);
       }
     }
+    const savedFactory = sessionStorage.getItem('ei_factory');
+    if (savedFactory) setCurrentFactoryId(savedFactory);
     
     setIsLoaded(true);
   }, []);
+
+  // Auto-select first assigned factory for non-admin users
+  useEffect(() => {
+    if (!user || !data.factories) return;
+    const accessibleFactories = getAccessibleFactories(data.factories, user);
+    if (!currentFactoryId && accessibleFactories.length > 0) {
+      setCurrentFactoryId(accessibleFactories[0].id);
+    }
+  }, [user, data.factories]);
 
   // Sync lang selection with system settings changes
   useEffect(() => {
@@ -649,6 +705,21 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('ei_data4_min', JSON.stringify(newData));
   };
 
+  // Helper: get factories accessible to a user
+  const getAccessibleFactories = useCallback((factories, u) => {
+    if (!u) return [];
+    if (u.role === 'admin') return factories || [];
+    const assigned = u.assignedFactories || [];
+    if (assigned.length === 0) return factories || []; // unassigned = all
+    return (factories || []).filter(f => assigned.includes(f.id));
+  }, []);
+
+  const setCurrentFactory = (factoryId) => {
+    setCurrentFactoryId(factoryId);
+    if (factoryId) sessionStorage.setItem('ei_factory', factoryId);
+    else sessionStorage.removeItem('ei_factory');
+  };
+
   const login = (userData) => {
     setUser(userData);
     sessionStorage.setItem('ei_user', JSON.stringify(userData));
@@ -656,7 +727,29 @@ export const AppProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    setCurrentFactoryId(null);
     sessionStorage.removeItem('ei_user');
+    sessionStorage.removeItem('ei_factory');
+  };
+
+  // User management (admin only)
+  const addUser = (userData) => {
+    const newUser = { ...userData, id: 'usr_' + Date.now() };
+    saveData({ ...data, users: [...(data.users || DEFAULT_USERS), newUser] });
+  };
+
+  const updateUser = (id, userData) => {
+    saveData({
+      ...data,
+      users: (data.users || DEFAULT_USERS).map(u => u.id === id ? { ...u, ...userData } : u)
+    });
+  };
+
+  const deleteUser = (id) => {
+    saveData({
+      ...data,
+      users: (data.users || DEFAULT_USERS).filter(u => u.id !== id)
+    });
   };
 
   const addEquipment = (eq) => {
@@ -705,6 +798,10 @@ export const AppProvider = ({ children }) => {
 
   if (!isLoaded) return null;
 
+  const currentFactory = (data.factories || []).find(f => f.id === currentFactoryId) || null;
+  const accessibleFactories = getAccessibleFactories(data.factories, user);
+  const isAdmin = user?.role === 'admin';
+
   return (
     <AppContext.Provider value={{
       data, setData: saveData,
@@ -712,7 +809,13 @@ export const AppProvider = ({ children }) => {
       addEquipment, updateEquipment, deleteEquipment,
       addFactory,
       resetDatabase,
-      lang, setLang, t
+      lang, setLang, t,
+      currentFactory, currentFactoryId, setCurrentFactory,
+      accessibleFactories,
+      isAdmin,
+      addUser, updateUser, deleteUser,
+      getAccessibleFactories,
+      DEFAULT_USERS
     }}>
       {children}
     </AppContext.Provider>

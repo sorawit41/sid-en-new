@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import AddEquipmentModal from './AddEquipmentModal';
@@ -41,15 +42,25 @@ export default function AppLayout() {
         toggleCollapse={() => setIsCollapsed(!isCollapsed)}
       />
       
-      <div className={`flex-1 flex flex-col min-h-screen transition-[margin] duration-300 ${isCollapsed ? 'md:ml-[80px]' : 'md:ml-[260px]'}`}>
+      <div className={`flex-1 flex flex-col min-h-screen min-w-0 md:ml-[80px]`}>
         <Topbar 
           title={title} 
           onMenuClick={() => setIsSidebarOpen(true)} 
         />
         
-        <div className="flex-1 p-6 md:p-8 overflow-y-auto">
+        <div className="flex-1 min-w-0 p-4 md:p-8 overflow-y-auto overflow-x-hidden">
           <div className="max-w-7xl mx-auto">
-            <Outlet />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>

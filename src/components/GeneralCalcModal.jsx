@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { ModalWrapper } from './Modals';
 import { AppContext } from '../context/AppContext';
-import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Check, AlertTriangle, Lightbulb } from 'lucide-react';
 
 export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
   const { data, setData, t, lang } = useContext(AppContext);
-  const [step, setStep] = useState(1);
-  const [calcResult, setCalcResult] = useState(null);
   
   const [params, setParams] = useState({
     measureName: 'เปลี่ยนอุปกรณ์ประสิทธิภาพสูง',
     measureNameEn: 'Replace with High-Efficiency Equipment',
+    category: 'Minor',
+    customName: '',
     currentKW: 10,
     proposedKW: 5,
     opHours: 8000,
@@ -20,8 +20,6 @@ export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
 
   useEffect(() => {
     if (isOpen) {
-      setStep(1);
-      setCalcResult(null);
       if (equipment) {
         setParams(p => ({
           ...p,
@@ -35,14 +33,13 @@ export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setParams(p => ({ ...p, [name]: name === 'measureName' || name === 'measureNameEn' ? value : (isNaN(parseFloat(value)) || value === '' ? value : parseFloat(value)) }));
+    setParams(p => ({ ...p, [name]: (name.includes('Name') || name === 'category' || name === 'customName') ? value : (isNaN(parseFloat(value)) || value === '' ? value : parseFloat(value)) }));
   };
 
-  const calculate = () => {
+  const savingsData = useMemo(() => {
     const { currentKW, proposedKW, opHours, elecRate, investCost } = params;
     
-    if (proposedKW >= currentKW) return alert(lang === 'th' ? 'กำลังไฟฟ้าหลังปรับปรุงต้องน้อยกว่ากำลังไฟฟ้าปัจจุบัน' : 'Proposed kW must be less than Current kW for energy savings.');
-    if (currentKW <= 0 || proposedKW <= 0 || opHours <= 0) return alert(lang === 'th' ? 'ค่าต้องมากกว่า 0' : 'Values must be greater than 0.');
+    if (currentKW <= 0 || proposedKW <= 0 || opHours <= 0) return null;
 
     const kwSaved = currentKW - proposedKW;
     const kWhYear = kwSaved * opHours;
@@ -50,16 +47,27 @@ export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
     const payback = investCost > 0 && bahtYear > 0 ? (investCost / bahtYear) : null;
     const ghgTon = (kWhYear * 0.4999) / 1000;
 
-    setCalcResult({
-      kwSaved, kWhYear, bahtYear, payback, ghgTon, investCost
-    });
-    setStep(2);
-  };
+    const isNotWorthIt = kwSaved <= 0;
+
+    return {
+      kwSaved, kWhYear, bahtYear, payback, ghgTon, investCost, isNotWorthIt
+    };
+  }, [params]);
 
   const saveMeasure = () => {
-    if (!calcResult) return;
+    if (!savingsData) return;
+    
+    if (savingsData.isNotWorthIt) {
+      if (!confirm('ข้อมูลแสดงให้เห็นว่า "ไม่คุ้มค่า" (ผลประหยัดติดลบหรือเท่ากับ 0) คุณแน่ใจหรือไม่ว่าต้องการบันทึกมาตรการนี้?')) {
+        return;
+      }
+    }
     
     const pct = ((params.currentKW - params.proposedKW) / params.currentKW) * 100;
+
+    const finalName = params.customName.trim() !== '' 
+      ? params.customName 
+      : (lang === 'th' ? params.measureName : params.measureNameEn);
 
     const newMeasure = {
       id: 'm_' + Date.now(),
@@ -68,15 +76,15 @@ export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
       catId: equipment?.catId || 'other',
       factory: equipment?.factory || 'Unknown',
       date: new Date().toISOString(),
-      measName: lang === 'th' ? params.measureName : params.measureNameEn,
+      measName: `[${params.category}] ${finalName}`,
       pct: pct,
       opHours: params.opHours,
-      kWhYear: calcResult.kWhYear,
-      bahtYear: calcResult.bahtYear,
-      invest: calcResult.investCost,
-      payback: calcResult.payback,
+      kWhYear: savingsData.kWhYear,
+      bahtYear: savingsData.bahtYear,
+      invest: savingsData.investCost,
+      payback: savingsData.payback,
       energyType: 'elec',
-      ghgTon: calcResult.ghgTon
+      ghgTon: savingsData.ghgTon
     };
 
     setData({
@@ -91,106 +99,128 @@ export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
 
   return (
     <ModalWrapper isOpen={isOpen} onClose={onClose} title={`${t('general_calculator')} - ${equipment?.tag || 'New'}`} maxWidth="700px">
-      
-      <div className="flex items-center justify-center gap-4 mb-8">
-        {[
-          {n: 1, label: t('parameters')},
-          {n: 2, label: lang === 'th' ? 'ผลลัพธ์ & บันทึก' : 'Results & Save'}
-        ].map(s => (
-          <div key={s.n} className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${step >= s.n ? 'bg-accent text-white' : 'bg-slate-100 text-slate-400'}`}>
-              {step > s.n ? <Check size={16} /> : s.n}
-            </div>
-            <span className={`text-xs font-medium hidden sm:block ${step >= s.n ? 'text-text' : 'text-slate-400'}`}>{s.label}</span>
-            {s.n < 2 && <div className={`w-8 h-px ${step > s.n ? 'bg-accent' : 'bg-slate-200'}`} />}
-          </div>
-        ))}
-      </div>
-
-      <div className="min-h-[300px]">
-        {step === 1 && (
-          <div className="animate-fade-in space-y-6">
-            <div className="bg-surface border border-border p-5 rounded-xl space-y-4">
+      <div className="flex flex-col gap-6 h-[70vh] overflow-y-auto pr-2 pb-6">
+        
+        {/* SECTION 1: Input Parameters */}
+        <div className="space-y-4">
+          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
+            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">1</span> 
+            {t('parameters')} & {t('measures')}
+          </h3>
+          
+          <div className="bg-surface border border-border p-5 rounded-xl space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-muted mb-1">{t('measure_name')}</label>
-                <input type="text" name={lang === 'th' ? "measureName" : "measureNameEn"} value={lang === 'th' ? params.measureName : params.measureNameEn} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-semibold" />
+                <label className="block text-xs font-medium text-muted mb-1">ประเภทมาตรการ (Category)</label>
+                <select name="category" value={params.category} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-semibold">
+                  <option value="Housekeeping">Housekeeping (No/Low Cost)</option>
+                  <option value="Minor">Minor (Medium Cost)</option>
+                  <option value="Major">Major (High Cost)</option>
+                </select>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-muted mb-1">{t('current_power')}</label>
-                  <input type="number" name="currentKW" value={params.currentKW} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted mb-1">{lang === 'th' ? "กำลังไฟฟ้าหลังปรับปรุง (kW)" : "Proposed Power (kW)"}</label>
-                  <input type="number" name="proposedKW" value={params.proposedKW} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted mb-1">{t('operating_hours')}</label>
-                  <input type="number" name="opHours" value={params.opHours} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted mb-1">{t('electricity_rate')}</label>
-                  <input type="number" name="elecRate" value={params.elecRate} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-medium text-muted mb-1">{t('investment_cost')}</label>
-                  <input type="number" name="investCost" value={params.investCost} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">{t('measure_name')} (ระบุเองได้)</label>
+                <input 
+                  type="text" 
+                  name="customName" 
+                  placeholder={lang === 'th' ? params.measureName : params.measureNameEn}
+                  value={params.customName} 
+                  onChange={handleChange} 
+                  className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent" 
+                />
               </div>
             </div>
-
-            <div className="flex justify-end pt-4 border-t border-border mt-6">
-              <button onClick={calculate} className="px-6 py-2.5 bg-accent text-white font-medium rounded-md hover:bg-accentHover transition-colors flex items-center gap-2 shadow-sm border-none cursor-pointer">
-                {t('calculate')} <ArrowRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && calcResult && (
-          <div className="animate-fade-in space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="col-span-2 p-4 bg-surface border border-border rounded-xl">
-                <div className="text-[11px] font-medium text-muted uppercase tracking-wider mb-1">{t('estimated_savings')}</div>
-                <div className="text-3xl font-bold font-mono text-emerald-600">
-                  {calcResult.kWhYear.toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-sm font-sans text-emerald-700/70">{t('kwh_yr')}</span>
-                </div>
+            
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">{t('current_power')}</label>
+                <input type="number" name="currentKW" value={params.currentKW} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
               </div>
-              <div className="col-span-2 p-4 bg-surface border border-border rounded-xl">
-                <div className="text-[11px] font-medium text-muted uppercase tracking-wider mb-1">{t('cost_savings')}</div>
-                <div className="text-3xl font-bold font-mono text-indigo-600">
-                  {calcResult.bahtYear.toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-sm font-sans text-indigo-700/70">{t('thb_yr')}</span>
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">{lang === 'th' ? "กำลังไฟฟ้าหลังปรับปรุง (kW)" : "Proposed Power (kW)"}</label>
+                <input type="number" name="proposedKW" value={params.proposedKW} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
               </div>
-              
-              <div className="col-span-2 p-4 bg-surface border border-border rounded-xl">
-                <div className="text-[11px] font-medium text-muted uppercase tracking-wider mb-1">{t('carbon_reduction')}</div>
-                <div className="text-2xl font-bold font-mono text-emerald-600">
-                  {calcResult.ghgTon.toLocaleString(undefined, {maximumFractionDigits:1})} <span className="text-sm font-sans text-muted">tCO₂e/yr</span>
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">{t('operating_hours')}</label>
+                <input type="number" name="opHours" value={params.opHours} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
               </div>
-              <div className="col-span-2 p-4 bg-surface border border-border rounded-xl">
-                <div className="text-[11px] font-medium text-muted uppercase tracking-wider mb-1">{t('payback')}</div>
-                <div className="text-2xl font-bold font-mono text-slate-700">
-                  {calcResult.payback ? calcResult.payback.toFixed(1) : '—'} <span className="text-sm font-sans text-muted">{t('years')}</span>
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">{t('electricity_rate')}</label>
+                <input type="number" name="elecRate" value={params.elecRate} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono" />
               </div>
-            </div>
-
-            <div className="flex justify-between pt-4 border-t border-border mt-6">
-              <button onClick={() => setStep(1)} className="px-5 py-2.5 bg-white border border-border text-text font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm cursor-pointer">
-                <ArrowLeft size={16} /> {t('parameters')}
-              </button>
-              <button 
-                onClick={saveMeasure} 
-                className="px-6 py-2.5 bg-emerald-600 text-white font-medium rounded-md hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm border-none cursor-pointer"
-              >
-                {t('save_measure')} <Check size={16} />
-              </button>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-muted mb-1">{t('investment_cost')}</label>
+                <input type="number" name="investCost" value={params.investCost} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-mono font-bold" />
+              </div>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* SECTION 2: Real-time Results */}
+        <div className="space-y-4">
+          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
+            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">2</span> 
+            {t('results')} & Savings
+          </h3>
+          
+          {savingsData ? (
+            <div className={`p-5 border rounded-xl mt-4 flex flex-wrap justify-between items-center gap-4 ${savingsData.isNotWorthIt ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-100'}`}>
+              {savingsData.isNotWorthIt ? (
+                <div className="w-full flex items-center gap-3 text-red-600 font-bold">
+                  <AlertTriangle size={24} />
+                  <div>
+                    ไม่คุ้มค่า (Not Cost-Effective)
+                    <div className="text-xs font-normal text-red-500 mt-1">
+                      กำลังไฟฟ้าหลังปรับปรุง ({params.proposedKW} kW) สูงกว่าหรือเท่ากับกำลังไฟฟ้าปัจจุบัน ({params.currentKW} kW)
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <div className="text-xs text-emerald-800 uppercase tracking-wide font-medium mb-1">{t('estimated_savings')}</div>
+                    <div className="text-xl font-bold text-emerald-600 font-mono">
+                      {(savingsData.kWhYear || 0).toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-xs text-emerald-700/80 font-sans">{t('kwh_yr')}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-emerald-800 uppercase tracking-wide font-medium mb-1">{t('carbon_reduction')}</div>
+                    <div className="text-xl font-bold text-emerald-600 font-mono">
+                      {(savingsData.ghgTon || 0).toLocaleString(undefined, {maximumFractionDigits:1})} <span className="text-xs text-emerald-700/80 font-sans">tCO₂e/yr</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-emerald-800 uppercase tracking-wide font-medium mb-1">{t('cost_savings')}</div>
+                    <div className="text-xl font-bold text-emerald-600 font-mono">
+                      {(savingsData.bahtYear || 0).toLocaleString(undefined, {maximumFractionDigits:0})} <span className="text-xs text-emerald-700/80 font-sans">{t('thb_yr')}</span>
+                    </div>
+                  </div>
+                  
+                  {savingsData.payback !== null && (
+                    <div className="w-full pt-3 mt-1 border-t border-emerald-200 flex justify-between items-center">
+                      <span className="text-sm text-emerald-800 font-medium">ระยะเวลาคืนทุน (Payback Period):</span>
+                      <span className="text-lg font-bold text-emerald-700 font-mono">{savingsData.payback.toFixed(2)} <span className="text-sm font-sans">ปี</span></span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-amber-600 bg-amber-50 p-4 rounded-xl border border-amber-200 flex gap-2">
+              <AlertTriangle size={18} /> กรุณากรอกข้อมูลให้ครบถ้วนเพื่อคำนวณผลประหยัด
+            </div>
+          )}
+          
+          <div className="flex justify-end pt-4 mt-4">
+            <button 
+              onClick={saveMeasure} 
+              disabled={!savingsData}
+              className={`px-6 py-2.5 text-white font-medium rounded-md transition-colors flex items-center gap-2 shadow-sm border-none cursor-pointer ${savingsData?.isNotWorthIt ? 'bg-slate-400' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+            >
+              {t('save_measure')} <Check size={16} />
+            </button>
+          </div>
+        </div>
       </div>
     </ModalWrapper>
   );
