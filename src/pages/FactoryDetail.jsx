@@ -1,9 +1,10 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
-import { ArrowLeft, MapPin, Factory as FactoryIcon, Activity, Zap, DollarSign, TrendingDown, Clock, Leaf, Settings, LayoutGrid, Snowflake, Wind, Droplets, Flame, Plus, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MapPin, Factory as FactoryIcon, Activity, Zap, TrendingDown, Clock, Leaf, Settings, LayoutGrid, Snowflake, Wind, Droplets, Flame, Plus, AlertTriangle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import AddEquipmentModal from '../components/AddEquipmentModal';
+import { RECOMMENDATIONS } from '../data/catalogData';
 
 const iconMap = {
   Snowflake: <Snowflake size={18} />,
@@ -32,8 +33,7 @@ export default function FactoryDetail() {
   const { data, setData, t, lang } = useContext(AppContext);
   const [selectedSubCat, setSelectedSubCat] = useState('');
   const [isAddEqOpen, setIsAddEqOpen] = useState(false);
-  const [budget, setBudget] = useState('');
-  const [selectedEqIds, setSelectedEqIds] = useState(new Set());
+  const [editEq, setEditEq] = useState(null);
   
   const factory = data.factories?.find(f => f.id === factoryId);
   const factoryParam = factory?.name;
@@ -48,6 +48,7 @@ export default function FactoryDetail() {
       </div>
     );
   }
+
 
   const currentYear = new Date().getFullYear();
   const storedMonthly = factory.monthlyUsage?.[currentYear] || {};
@@ -136,6 +137,7 @@ export default function FactoryDetail() {
   const replacementAdvisor = useMemo(() => {
     const fEqs = data.equipments.filter(e => e.factory === factoryParam);
     const currentYr = new Date().getFullYear();
+    const elecRate = data?.settings?.electricityRate !== undefined ? parseFloat(data.settings.electricityRate) : 4.2;
     return fEqs
       .map(eq => {
         const age = eq.year ? (currentYr - parseInt(eq.year)) : 0;
@@ -143,32 +145,20 @@ export default function FactoryDetail() {
         const score = kWh * (age + 1);
         const co2PerYear = (kWh * emissionFactor) / 1000;
         const taxPerYear = co2PerYear * carbonTaxRate;
-        const estCost = CATALOG_COSTS[eq.catId] || 500000;
-        return { ...eq, age, score, co2PerYear, taxPerYear, estCost };
+        // Top-rated catalog model for this equipment category (used as the "what to change to" suggestion)
+        const suggested = RECOMMENDATIONS[eq.catId]?.[0] || null;
+        const estCost = suggested?.costEst || CATALOG_COSTS[eq.catId] || 500000;
+
+        // Rough savings estimate if replaced with the suggested model
+        const improvementPct = Math.min(0.20 + (estCost / 10000000), 0.45);
+        const kwhSaved = kWh * improvementPct;
+        const bahtSaved = kwhSaved * elecRate;
+        const paybackYears = bahtSaved > 0 ? estCost / bahtSaved : null;
+
+        return { ...eq, age, score, co2PerYear, taxPerYear, estCost, suggested, kwhSaved, bahtSaved, paybackYears };
       })
       .sort((a, b) => b.score - a.score);
-  }, [data.equipments, factoryParam, emissionFactor, carbonTaxRate]);
-
-  // Budget Planner - Manual checkbox selection
-  const budgetNum = parseFloat(budget) || 0;
-
-  const toggleBudgetEq = (id, estCost) => {
-    setSelectedEqIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const budgetPlan = replacementAdvisor.filter(eq => selectedEqIds.has(eq.id));
-  const budgetTotalSavings = budgetPlan.reduce((s, e) => s + (e.costYear || 0), 0);
-  const budgetTotalCo2 = budgetPlan.reduce((s, e) => s + e.co2PerYear, 0);
-  const budgetTotalCost = budgetPlan.reduce((s, e) => s + e.estCost, 0);
-  const budgetRemaining = budgetNum - budgetTotalCost;
+  }, [data.equipments, factoryParam, emissionFactor, carbonTaxRate, data.settings]);
 
   const categorySavingsBreakdown = useMemo(() => {
     if (!factoryParam) return [];
@@ -228,6 +218,18 @@ export default function FactoryDetail() {
 
   const potentialSavingsBaht = measures.reduce((sum, m) => sum + (m.bahtYear || 0), 0);
   const totalInvestment = measures.reduce((sum, m) => sum + (m.invest || 0), 0);
+
+  // Conditional render AFTER all hooks
+  if (isAddEqOpen || editEq) {
+    return (
+      <AddEquipmentModal 
+        isOpen={true}
+        onClose={() => { setIsAddEqOpen(false); setEditEq(null); }}
+        equipment={editEq || { factory: factory.name }}
+        defaultFactory={factory.name}
+      />
+    );
+  }
 
   return (
     <div className="animate-slide-up space-y-6 pb-12 select-none">
@@ -422,14 +424,15 @@ export default function FactoryDetail() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {replacementAdvisor.slice(0, 6).map((eq, idx) => {
               // Determine recommended action based on age, category, and energy
-              let action, actionColor, actionBg, actionDesc;
+              let action, actionColor, actionBg, actionDesc, isReplace = false;
               if (eq.age >= 12 || (eq.age >= 8 && eq.score > 500000)) {
                 action = lang === 'th' ? '🔄 เปลี่ยนเครื่องใหม่' : '🔄 Replace Equipment';
                 actionColor = 'text-red-400';
                 actionBg = 'bg-red-500/10 border-red-500/25';
-                actionDesc = lang === 'th' 
-                  ? `อุปกรณ์อายุ ${eq.age} ปี เกินอายุการใช้งาน ควรเปลี่ยนเป็นรุ่นใหม่ประสิทธิภาพสูง` 
+                actionDesc = lang === 'th'
+                  ? `อุปกรณ์อายุ ${eq.age} ปี เกินอายุการใช้งาน ควรเปลี่ยนเป็นรุ่นใหม่ประสิทธิภาพสูง`
                   : `Equipment is ${eq.age} years old. Replace with high-efficiency model for max ROI.`;
+                isReplace = true;
               } else if (['chiller','cooling'].includes(eq.catId) && eq.age >= 3) {
                 action = lang === 'th' ? '🧹 ล้างทำความสะอาด' : '🧹 Clean & Service';
                 actionColor = 'text-blue-400';
@@ -462,7 +465,8 @@ export default function FactoryDetail() {
                 cooling: '/catalog/rec_ct_1.png',
                 electrical: '/catalog/rec_el_1.png',
               };
-              const imgSrc = CAT_IMAGE_MAP[eq.catId] || null;
+              // When replacing, show a photo of the actual suggested model instead of a generic category image
+              const imgSrc = (isReplace && eq.suggested?.image) || CAT_IMAGE_MAP[eq.catId] || null;
 
               const priorityColors = [
                 'from-red-500/20 to-red-500/5 border-red-500/30',
@@ -522,6 +526,27 @@ export default function FactoryDetail() {
                       <div className="text-[10px] text-muted leading-relaxed">{actionDesc}</div>
                     </div>
 
+                    {/* Suggested replacement model + savings */}
+                    {isReplace && eq.suggested && (
+                      <div className="rounded-lg border border-accent/25 bg-accent/5 p-3 space-y-1.5">
+                        <div className="text-[9px] font-black text-accent uppercase tracking-wider">
+                          {lang === 'th' ? '✨ รุ่นแนะนำให้เปลี่ยนเป็น' : '✨ Suggested Replacement'}
+                        </div>
+                        <div className="text-xs font-bold text-text">{eq.suggested.brand} {eq.suggested.model}</div>
+                        <div className="text-[10px] text-muted leading-snug">{eq.suggested.spec}</div>
+                        <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-accent/15 text-[10px]">
+                          <span className="text-muted">{lang === 'th' ? 'ประหยัด/ปี' : 'Savings/yr'}</span>
+                          <span className="font-bold text-good font-mono">฿{Math.round(eq.bahtSaved).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-muted">{lang === 'th' ? 'คืนทุนโดยประมาณ' : 'Est. Payback'}</span>
+                          <span className="font-bold text-amber-500 font-mono">
+                            {eq.paybackYears ? `${eq.paybackYears.toFixed(1)} ${lang === 'th' ? 'ปี' : 'yr'}` : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Tax info */}
                     <div className="flex items-center justify-between text-[10px]">
                       <span className="text-muted">{lang === 'th' ? 'ภาษีคาร์บอน/ปี:' : 'Carbon Tax/yr:'}</span>
@@ -535,139 +560,6 @@ export default function FactoryDetail() {
         ) : (
           <div className="text-center text-muted text-xs py-12 border-2 border-dashed border-border/40 rounded-xl">
             {lang === 'th' ? 'เพิ่มอุปกรณ์เข้าระบบก่อนเพื่อดูคำแนะนำ' : 'Add equipment to see replacement recommendations'}
-          </div>
-        )}
-      </div>
-
-      {/* ===== Budget Planner ===== */}
-      <div className="bg-surface border border-border rounded-xl p-6 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-text flex items-center gap-2">
-          <DollarSign size={16} className="text-good" />
-          {lang === 'th' ? 'วางแผนงบประมาณเปลี่ยนอุปกรณ์' : 'Equipment Replacement Budget Planner'}
-        </h3>
-        
-        {/* Budget input + summary bar */}
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="text-xs font-bold text-muted shrink-0">{lang === 'th' ? 'งบประมาณที่มี:' : 'Available Budget:'}</label>
-          <div className="relative">
-            <span className="absolute left-3 top-2.5 text-xs font-bold text-muted">฿</span>
-            <input
-              type="number"
-              value={budget}
-              onChange={e => { setBudget(e.target.value); setSelectedEqIds(new Set()); }}
-              placeholder={lang === 'th' ? 'เช่น 5000000' : 'e.g. 5000000'}
-              className="pl-7 pr-4 py-2.5 w-52 bg-bg/50 border border-border rounded-xl text-xs font-mono font-bold outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all"
-            />
-          </div>
-          {budgetNum > 0 && (
-            <div className="flex items-center gap-3 ml-auto">
-              <div className="text-right">
-                <div className="text-[9px] text-muted font-bold uppercase">{lang === 'th' ? 'ใช้ไปแล้ว' : 'Spent'}</div>
-                <div className="text-xs font-bold text-red-400 font-mono">฿{budgetTotalCost.toLocaleString()}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[9px] text-muted font-bold uppercase">{lang === 'th' ? 'คงเหลือ' : 'Remaining'}</div>
-                <div className={`text-xs font-bold font-mono ${budgetRemaining < 0 ? 'text-red-500' : 'text-good'}`}>฿{budgetRemaining.toLocaleString()}</div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Budget bar progress */}
-        {budgetNum > 0 && (
-          <div className="space-y-1">
-            <div className="h-2 rounded-full bg-border/40 overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-300 ${budgetTotalCost > budgetNum ? 'bg-red-500' : 'bg-accent'}`}
-                style={{ width: `${Math.min(100, (budgetTotalCost / budgetNum) * 100)}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-[9px] text-muted">
-              <span>฿0</span>
-              <span className="font-bold">{Math.min(100, ((budgetTotalCost / budgetNum) * 100)).toFixed(0)}% {lang === 'th' ? 'ใช้แล้ว' : 'used'}</span>
-              <span>฿{budgetNum.toLocaleString()}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Selectable equipment list */}
-        {replacementAdvisor.length > 0 ? (
-          <div className="overflow-x-auto border border-border/50 rounded-xl">
-            <table className="w-full text-xs text-left whitespace-nowrap">
-              <thead className="bg-card2/50 text-[10px] uppercase tracking-wider text-muted font-bold border-b border-border/50">
-                <tr>
-                  <th className="px-4 py-2.5 text-center">{lang === 'th' ? 'เลือก' : 'Select'}</th>
-                  <th className="px-4 py-2.5">Tag</th>
-                  <th className="px-4 py-2.5">{lang === 'th' ? 'ประเภท' : 'Type'}</th>
-                  <th className="px-4 py-2.5 text-right">{lang === 'th' ? 'ราคาเปลี่ยน' : 'Replace Cost'}</th>
-                  <th className="px-4 py-2.5 text-right">{lang === 'th' ? 'ประหยัด/ปี' : 'Savings/yr'}</th>
-                  <th className="px-4 py-2.5 text-right">{lang === 'th' ? 'CO₂/ปี' : 'CO₂/yr'}</th>
-                  <th className="px-4 py-2.5 text-right">ROI</th>
-                  <th className="px-4 py-2.5 text-right">{lang === 'th' ? 'สถานะงบ' : 'Budget Status'}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/30">
-                {replacementAdvisor.map(eq => {
-                  const isSelected = selectedEqIds.has(eq.id);
-                  const hypotheticalSpent = budgetTotalCost + (isSelected ? 0 : eq.estCost);
-                  const canAfford = !isSelected ? (budgetNum === 0 || hypotheticalSpent <= budgetNum) : true;
-                  return (
-                    <tr 
-                      key={eq.id} 
-                      onClick={() => toggleBudgetEq(eq.id, eq.estCost)}
-                      className={`cursor-pointer transition-colors ${isSelected ? 'bg-accent/5 border-l-2 border-accent' : 'hover:bg-bg/30'}`}
-                    >
-                      <td className="px-4 py-2.5 text-center">
-                        <div className={`w-4 h-4 rounded border-2 mx-auto flex items-center justify-center transition-all ${isSelected ? 'bg-accent border-accent' : 'border-border/60'}`}>
-                          {isSelected && <span className="text-white text-[8px] font-black">✓</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 font-bold text-text">{eq.tag} <span className="font-normal text-muted">| {eq.brand}</span></td>
-                      <td className="px-4 py-2.5 text-muted">{data.cats.find(c => c.id === eq.catId)?.name || eq.catId}</td>
-                      <td className={`px-4 py-2.5 text-right font-mono font-bold ${isSelected ? 'text-accent' : 'text-text'}`}>฿{eq.estCost.toLocaleString()}</td>
-                      <td className="px-4 py-2.5 text-right font-mono text-good">฿{(eq.costYear || 0).toLocaleString()}</td>
-                      <td className="px-4 py-2.5 text-right font-mono text-green-500">{eq.co2PerYear.toFixed(2)} t</td>
-                      <td className="px-4 py-2.5 text-right font-mono text-muted">{eq.costYear ? (eq.estCost / eq.costYear).toFixed(1) : '—'} yr</td>
-                      <td className="px-4 py-2.5 text-right">
-                        {isSelected ? (
-                          <span className="px-2 py-0.5 bg-accent/15 text-accent text-[9px] font-bold rounded-full">{lang === 'th' ? '✓ เลือกแล้ว' : '✓ Selected'}</span>
-                        ) : budgetNum > 0 && !canAfford ? (
-                          <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[9px] font-bold rounded-full">{lang === 'th' ? 'งบไม่พอ' : 'Over budget'}</span>
-                        ) : (
-                          <span className="px-2 py-0.5 bg-border/40 text-muted text-[9px] font-bold rounded-full">{lang === 'th' ? 'กดเลือก' : 'Click to add'}</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center text-muted text-xs py-6">{lang === 'th' ? 'ยังไม่มีข้อมูลอุปกรณ์' : 'No equipment data yet'}</div>
-        )}
-
-        {/* Summary totals */}
-        {budgetPlan.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-border/50">
-            <div className="p-3.5 bg-accent/10 rounded-xl border border-accent/20">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-accent">{lang === 'th' ? 'เครื่องที่เลือก' : 'Items Selected'}</div>
-              <div className="text-sm font-bold text-accent font-mono mt-1">{budgetPlan.length} {lang === 'th' ? 'เครื่อง' : 'units'}</div>
-            </div>
-            <div className="p-3.5 bg-good/10 rounded-xl border border-good/20">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-good">{lang === 'th' ? 'ประหยัดค่าไฟ/ปี' : 'Energy Savings/yr'}</div>
-              <div className="text-sm font-bold text-good font-mono mt-1">฿{budgetTotalSavings.toLocaleString()}</div>
-            </div>
-            <div className="p-3.5 bg-green-500/10 rounded-xl border border-green-500/20">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-green-500">{lang === 'th' ? 'CO₂ ลดได้/ปี' : 'CO₂ Reduced/yr'}</div>
-              <div className="text-sm font-bold text-green-500 font-mono mt-1">{budgetTotalCo2.toFixed(2)} t</div>
-            </div>
-            <div className="p-3.5 bg-card2 rounded-xl border border-border/40">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-muted">{lang === 'th' ? 'คืนทุนใน' : 'Payback Period'}</div>
-              <div className="text-sm font-bold text-text font-mono mt-1">
-                {budgetTotalSavings > 0 ? (budgetTotalCost / budgetTotalSavings).toFixed(1) : '—'} <span className="text-[9px] font-sans text-muted">yrs</span>
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -792,6 +684,7 @@ export default function FactoryDetail() {
                 <th className="p-4 font-semibold">Brand / Model</th>
                 <th className="p-4 font-semibold text-right">Energy (kWh/yr)</th>
                 <th className="p-4 font-semibold text-right">Cost (฿/yr)</th>
+                <th className="p-4 font-semibold text-center">{lang === 'th' ? 'จัดการ' : 'Action'}</th>
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-border">
@@ -802,23 +695,25 @@ export default function FactoryDetail() {
                   <td className="p-4 text-muted">{eq.brand} <span className="opacity-50">|</span> {eq.model}</td>
                   <td className="p-4 text-right font-medium text-amber-500">{(eq.energyUseYear || 0).toLocaleString()}</td>
                   <td className="p-4 text-right font-medium text-emerald-500">{(eq.costYear || 0).toLocaleString()}</td>
+                  <td className="p-4 text-center">
+                    <button 
+                      onClick={() => setEditEq(eq)}
+                      className="px-3 py-1 bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+                    >
+                      {lang === 'th' ? 'แก้ไข' : 'Edit'}
+                    </button>
+                  </td>
                 </tr>
               ))}
               {equipments.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-muted">No equipment found for this filter.</td>
+                  <td colSpan="6" className="p-8 text-center text-muted">No equipment found for this filter.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
-
-      <AddEquipmentModal 
-        isOpen={isAddEqOpen} 
-        onClose={() => setIsAddEqOpen(false)} 
-        equipment={{ factory: factory.name }} 
-      />
     </div>
   );
 }

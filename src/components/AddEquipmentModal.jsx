@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { ModalWrapper } from './Modals';
 import { AppContext } from '../context/AppContext';
-import { Settings, Tag, Zap, Activity } from 'lucide-react';
+import { Settings, Tag, Zap, Activity, ArrowLeft, Check, MessageSquare, Trash2, Plus } from 'lucide-react';
 
 const CATALOG_MODELS = {
   chiller: [
@@ -34,16 +33,16 @@ const CATALOG_MODELS = {
   ]
 };
 
-export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
-  const { data, setData, t, lang } = useContext(AppContext);
+export default function AddEquipmentModal({ isOpen, onClose, equipment, defaultFactory }) {
+  const { data, setData, t, lang, user } = useContext(AppContext);
   const factories = (data.factories || []).map(f => f.name);
 
   const [formData, setFormData] = useState({
     tag: '',
     brand: '',
     model: '',
-    catId: 'other',
-    factory: 'โรงงานอยุธยา',
+    catId: 'compressor',
+    factory: defaultFactory || (factories[0] || 'โรงงานอยุธยา'),
     dept: '',
     year: new Date().getFullYear().toString(),
     kw: '',
@@ -51,20 +50,23 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
     efficiency: '',
     rated: '',
     opHoursYear: 8000,
-    loadFactor: 0.8
+    loadFactor: 0.8,
+    comments: []
   });
+
+  const [newComment, setNewComment] = useState('');
 
   const catalogOptions = CATALOG_MODELS[formData?.catId] || [];
 
   useEffect(() => {
     if (isOpen) {
-      if (equipment) {
+      if (equipment && equipment.id) {
         setFormData({
           tag: equipment.tag || '',
           brand: equipment.brand || '',
           model: equipment.model || '',
           catId: equipment.catId || 'other',
-          factory: equipment.factory || (factories[0] || 'โรงงานอยุธยา'),
+          factory: equipment.factory || defaultFactory || (factories[0] || 'โรงงานอยุธยา'),
           dept: equipment.dept || '',
           year: equipment.year || new Date().getFullYear().toString(),
           kw: equipment.kw || '',
@@ -72,7 +74,8 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
           efficiency: equipment.efficiency || '',
           rated: equipment.rated || '',
           opHoursYear: equipment.opHoursYear || 8000,
-          loadFactor: equipment.loadFactor || 0.8
+          loadFactor: equipment.loadFactor || 0.8,
+          comments: equipment.comments || []
         });
       } else {
         setFormData({
@@ -80,7 +83,7 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
           brand: '',
           model: '',
           catId: 'compressor',
-          factory: factories[0] || 'โรงงานอยุธยา',
+          factory: equipment?.factory || defaultFactory || (factories[0] || 'โรงงานอยุธยา'),
           dept: '',
           year: new Date().getFullYear().toString(),
           kw: '',
@@ -88,11 +91,12 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
           efficiency: '',
           rated: '',
           opHoursYear: 8000,
-          loadFactor: 0.8
+          loadFactor: 0.8,
+          comments: []
         });
       }
     }
-  }, [isOpen, equipment, factories.join(',')]);
+  }, [isOpen, equipment, defaultFactory, factories.join(',')]);
 
   const parseNumber = (val) => {
     if (!val) return null;
@@ -146,9 +150,41 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
     }
   };
 
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    const commentObj = {
+      id: Date.now().toString(),
+      text: newComment.trim(),
+      date: new Date().toISOString()
+    };
+    setFormData(prev => ({
+      ...prev,
+      comments: [commentObj, ...prev.comments]
+    }));
+    setNewComment('');
+  };
+
+  const handleRemoveComment = (id) => {
+    setFormData(prev => ({
+      ...prev,
+      comments: prev.comments.filter(c => c.id !== id)
+    }));
+  };
+
   const handleSave = (e) => {
     e.preventDefault();
-    if (!formData.tag.trim()) return alert('Tag name is required');
+    if (!formData.tag.trim()) return alert(lang === 'th' ? 'กรุณาระบุ Tag อุปกรณ์' : 'Tag name is required');
+
+    // Auto-commit any text left in the comment box
+    let finalComments = formData.comments || [];
+    if (newComment.trim()) {
+      const commentObj = {
+        id: Date.now().toString(),
+        text: newComment.trim(),
+        date: new Date().toISOString()
+      };
+      finalComments = [commentObj, ...finalComments];
+    }
 
     const kw = parseNumber(formData.kw) || 0;
     const hours = parseNumber(formData.opHoursYear) || 8000;
@@ -162,19 +198,27 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
 
     const finalData = {
       ...formData,
+      comments: finalComments,
       energyUseYear,
       costYear,
       co2Year
     };
 
     let newEquipments;
-    if (equipment) {
+    if (equipment && equipment.id) {
       // Edit
-      newEquipments = data.equipments.map(eq => eq.id === equipment.id ? { ...eq, ...finalData } : eq);
+      newEquipments = data.equipments.map(eq => eq.id === equipment.id ? { 
+        ...eq, 
+        ...finalData,
+        updatedBy: user?.name || 'Unknown',
+        updatedAt: new Date().toISOString()
+      } : eq);
     } else {
       // Add
       const newEq = {
         id: 'eq_' + Date.now(),
+        createdBy: user?.name || 'Unknown',
+        createdAt: new Date().toISOString(),
         ...finalData
       };
       newEquipments = [...data.equipments, newEq];
@@ -187,11 +231,26 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
   if (!isOpen) return null;
 
   return (
-    <ModalWrapper isOpen={isOpen} onClose={onClose} title={equipment ? t('edit_equipment') : t('add_new_equipment')} maxWidth="600px">
+    <div className="animate-fade-in max-w-4xl mx-auto space-y-6 pb-20">
       <form onSubmit={handleSave} className="space-y-6">
 
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
+          <div>
+            <h2 className="text-xl font-bold text-text">
+              {equipment && equipment.id ? (lang === 'th' ? '✏️ แก้ไขข้อมูลอุปกรณ์' : t('edit_equipment')) : (lang === 'th' ? '➕ เพิ่มอุปกรณ์ใหม่' : t('add_new_equipment'))}
+            </h2>
+            <p className="text-sm text-muted mt-1">
+              {lang === 'th' ? 'กรอกข้อมูลรายละเอียดของเครื่องจักร/อุปกรณ์ให้ครบถ้วน' : 'Fill in the equipment details below'}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5 bg-surface text-text cursor-pointer">
+            <ArrowLeft size={16} /> {t('cancel')}
+          </button>
+        </div>
+
         {/* Section 1: Identification */}
-        <div className="bg-surface border border-border p-5 rounded-xl space-y-4 relative overflow-hidden group">
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1 h-full bg-accent/50 group-hover:bg-accent transition-colors"></div>
           <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2">
             <Tag size={16} className="text-muted" /> {t('identification')}
@@ -199,21 +258,53 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
 
           <div>
             <label className="block text-xs font-medium text-muted mb-1.5">{t('equipment_tag')} <span className="text-red-500">*</span></label>
-            <input required type="text" name="tag" value={formData.tag} onChange={handleChange} placeholder="e.g. CH-01" className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono" />
+            <input 
+              required 
+              type="text" 
+              name="tag" 
+              value={formData.tag} 
+              onChange={handleChange} 
+              disabled={!!(equipment && equipment.id)}
+              placeholder="e.g. CH-01" 
+              className={`w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono ${equipment && equipment.id ? 'opacity-70 cursor-not-allowed bg-slate-50' : ''}`} 
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-muted mb-1.5">{t('factory')}</label>
-              <select name="factory" value={formData.factory} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all">
-                {factories.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
+              {equipment && equipment.id ? (
+                <input 
+                  type="text"
+                  value={formData.factory}
+                  disabled
+                  className="w-full p-2.5 bg-slate-50 border border-border rounded-lg text-sm outline-none opacity-70 cursor-not-allowed"
+                />
+              ) : (
+                <select 
+                  name="factory" 
+                  value={formData.factory} 
+                  onChange={handleChange} 
+                  className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
+                >
+                  {factories.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-muted mb-1.5">{t('category')}</label>
-              <select name="catId" value={formData.catId} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all">
-                {data.cats && data.cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              {equipment && equipment.id ? (
+                <input 
+                  type="text"
+                  value={data.cats?.find(c => c.id === formData.catId)?.name || formData.catId}
+                  disabled
+                  className="w-full p-2.5 bg-slate-50 border border-border rounded-lg text-sm outline-none opacity-70 cursor-not-allowed"
+                />
+              ) : (
+                <select name="catId" value={formData.catId} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all">
+                  {data.cats && data.cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
             </div>
           </div>
 
@@ -221,7 +312,15 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-muted mb-1.5">{lang === 'th' ? 'แผนก / ตำแหน่งติดตั้ง' : 'Department / Location'}</label>
-              <input type="text" name="dept" value={formData.dept} onChange={handleChange} placeholder={lang === 'th' ? 'เช่น ห้องคอมเพรสเซอร์' : 'e.g. Compressor Room'} className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all" />
+              <input 
+                type="text" 
+                name="dept" 
+                value={formData.dept} 
+                onChange={handleChange} 
+                disabled={!!(equipment && equipment.id)}
+                placeholder={lang === 'th' ? 'เช่น ห้องคอมเพรสเซอร์' : 'e.g. Compressor Room'} 
+                className={`w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all ${equipment && equipment.id ? 'opacity-70 cursor-not-allowed bg-slate-50' : ''}`} 
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-muted mb-1.5">
@@ -233,10 +332,11 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
                   name="year"
                   value={formData.year}
                   onChange={handleChange}
+                  disabled={!!(equipment && equipment.id)}
                   placeholder={new Date().getFullYear().toString()}
                   min="1990"
                   max={new Date().getFullYear()}
-                  className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono"
+                  className={`w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono ${equipment && equipment.id ? 'opacity-70 cursor-not-allowed bg-slate-50' : ''}`}
                 />
                 {formData.year && (
                   <span className="absolute right-3 top-2.5 text-[10px] font-bold text-accent">
@@ -249,13 +349,13 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
         </div>
 
         {/* Section 2: Technical Specifications */}
-        <div className="bg-surface border border-border p-5 rounded-xl space-y-4 relative overflow-hidden group">
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50 group-hover:bg-emerald-500 transition-colors"></div>
           <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2 pt-1">
             <Settings size={16} className="text-muted" /> {t('specifications_title')}
           </h4>
 
-          {catalogOptions.length > 0 && (
+          {catalogOptions.length > 0 && (!equipment || !equipment.id) && (
             <div className="bg-bg/40 border border-accent/20 rounded-xl p-3.5 space-y-2 mb-4">
               <label className="block text-xs font-bold text-accent flex items-center gap-1.5">
                 <span>✨ {lang === 'th' ? 'เลือกข้อมูลสำเร็จจากแคตตาล็อก' : 'Quick Fill from Catalog'}</span>
@@ -285,11 +385,11 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-muted mb-1.5">{t('brand')}</label>
-              <input type="text" name="brand" value={formData.brand} onChange={handleChange} placeholder="e.g. Trane" className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all" />
+              <input type="text" name="brand" value={formData.brand} onChange={handleChange} disabled={!!(equipment && equipment.id)} placeholder="e.g. Trane" className={`w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all ${equipment && equipment.id ? 'opacity-70 cursor-not-allowed bg-slate-50' : ''}`} />
             </div>
             <div>
               <label className="block text-xs font-medium text-muted mb-1.5">{t('model')}</label>
-              <input type="text" name="model" value={formData.model} onChange={handleChange} placeholder="e.g. CVHE" className="w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all" />
+              <input type="text" name="model" value={formData.model} onChange={handleChange} disabled={!!(equipment && equipment.id)} placeholder="e.g. CVHE" className={`w-full p-2.5 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all ${equipment && equipment.id ? 'opacity-70 cursor-not-allowed bg-slate-50' : ''}`} />
             </div>
             <div>
               <label className="block text-xs font-medium text-muted mb-1.5">
@@ -318,14 +418,14 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
                   type="text"
                   name="efficiency"
                   value={formData.efficiency}
-                  readOnly
-                  placeholder="Auto Calc"
-                  className="w-full p-2.5 pl-9 bg-gray-50 border border-border rounded-lg text-sm outline-none text-emerald-600 font-bold transition-all font-mono cursor-not-allowed"
+                  onChange={handleChange}
+                  placeholder="Auto Calc or Manual"
+                  className="w-full p-2.5 pl-9 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent text-emerald-600 font-bold transition-all font-mono"
                 />
                 <Activity size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500" />
               </div>
             </div>
-            </div>
+          </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -339,16 +439,71 @@ export default function AddEquipmentModal({ isOpen, onClose, equipment }) {
           </div>
         </div>
 
-        <div className="flex justify-end pt-4 border-t border-border mt-6 gap-3">
-          <button type="button" onClick={onClose} className="px-5 py-2.5 bg-white border border-border text-text font-medium rounded-md hover:bg-slate-50 transition-colors">
+        {/* Section 3: Inspection History & Comments */}
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/50 group-hover:bg-blue-500 transition-colors"></div>
+          <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2 pt-1">
+            <MessageSquare size={16} className="text-muted" /> {lang === 'th' ? 'ประวัติการตรวจดู / สรุปปัญหา' : 'Inspection History & Comments'}
+          </h4>
+
+          <div className="flex gap-2 mb-4">
+            <textarea 
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder={lang === 'th' ? 'เพิ่มข้อความอธิบายปัญหา, ประวัติการซ่อมบำรุง หรือข้อสังเกต...' : 'Add a note, maintenance history, or observation...'}
+              className="w-full p-3 bg-bg border border-border rounded-lg text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all resize-none h-[80px]"
+            />
+            <button 
+              type="button"
+              onClick={handleAddComment}
+              disabled={!newComment.trim()}
+              className="px-4 py-2 bg-accent text-white font-medium rounded-lg hover:bg-accentHover transition-colors flex flex-col items-center justify-center gap-1 shrink-0 w-[80px] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus size={20} />
+              <span className="text-xs">{t('add')}</span>
+            </button>
+          </div>
+
+          {formData.comments && formData.comments.length > 0 ? (
+            <div className="space-y-3 mt-4">
+              {formData.comments.map((comment) => (
+                <div key={comment.id} className="p-3 bg-bg border border-border rounded-lg relative group/item">
+                  <div className="flex justify-between items-start gap-4 mb-1">
+                    <span className="text-[10px] font-bold text-muted">
+                      {new Date(comment.date).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </span>
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveComment(comment.id)}
+                      className="text-red-400 hover:text-red-600 opacity-0 group-hover/item:opacity-100 transition-opacity p-1"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <p className="text-sm text-text whitespace-pre-line">{comment.text}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-muted text-center py-6 bg-bg/50 border border-dashed border-border rounded-lg">
+              {lang === 'th' ? 'ยังไม่มีประวัติหรือคอมเมนต์' : 'No history or comments yet.'}
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 pt-6 border-t border-border mt-8">
+          <button type="button" onClick={onClose} className="px-5 py-2.5 bg-surface border border-border text-text font-medium rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
             {t('cancel')}
           </button>
-          <button type="submit" className="px-6 py-2.5 bg-accent text-white font-medium rounded-md hover:bg-accentHover transition-colors">
-            {equipment ? t('save_changes') : t('add_equipment')}
+          <button type="submit" className="px-6 py-2.5 bg-accent text-white font-medium rounded-xl hover:bg-accentHover transition-colors flex items-center gap-2 shadow-sm cursor-pointer">
+            <Check size={16} /> {equipment && equipment.id ? (lang === 'th' ? 'บันทึกการเปลี่ยนแปลง' : t('save_changes')) : (lang === 'th' ? 'บันทึกอุปกรณ์' : t('add_equipment'))}
           </button>
         </div>
 
       </form>
-    </ModalWrapper>
+    </div>
   );
 }

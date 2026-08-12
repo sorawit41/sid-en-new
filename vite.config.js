@@ -4,8 +4,9 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Set the base path to match the GitHub repository name for GitHub Pages deployment.
-  // Change '/sid-en/' if your repository name on GitHub is different.
-  base: process.env.NODE_ENV === 'production' ? '/sid-en/' : '/',
+  // Set the base path to match the deployment URL. 
+  // Use '/' if deploying to the root of a domain (e.g., https://example.com/).
+  // Use '/sid-en/' if deploying to a subdirectory (e.g., https://example.com/sid-en/).
+  base: '/',
 })
 

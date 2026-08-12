@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { ModalWrapper } from './Modals';
-import { AppContext } from '../context/AppContext';
-import { Check, AlertTriangle, Lightbulb } from 'lucide-react';
+import { Check, AlertTriangle, ArrowLeft, Settings, Activity } from 'lucide-react';
+
+
 
 export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
   const { data, setData, t, lang } = useContext(AppContext);
@@ -98,18 +98,49 @@ export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
   if (!isOpen) return null;
 
   return (
-    <ModalWrapper isOpen={isOpen} onClose={onClose} title={`${t('general_calculator')} - ${equipment?.tag || 'New'}`} maxWidth="700px">
-      <div className="flex flex-col gap-6 h-[70vh] overflow-y-auto pr-2 pb-6">
+    <div className="animate-fade-in max-w-4xl mx-auto space-y-6 pb-20 pt-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
+        <div>
+          <h2 className="text-xl font-bold text-text">
+            {t('general_calculator')} — {equipment?.tag || 'General'}
+          </h2>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="text-sm text-muted">{equipment?.factory || ''}</span>
+            {equipment?.brand && <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded text-xs font-medium">{equipment.brand} {equipment.model}</span>}
+            {equipment?.kw && <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded text-xs font-medium">{equipment.kw} kW</span>}
+            {equipment?.capacity && <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded text-xs font-medium">{equipment.capacity} TR</span>}
+            {equipment?.opHoursYear && <span className="px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-600 rounded text-xs font-medium">{equipment.opHoursYear} hrs/yr</span>}
+            {equipment?.efficiency && <span className="px-2 py-0.5 bg-purple-50 border border-purple-100 text-purple-600 rounded text-xs font-medium">{equipment.efficiency} kW/TR</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5 bg-surface text-text cursor-pointer">
+            <ArrowLeft size={16} /> {t('cancel')}
+          </button>
+          <button
+            onClick={saveMeasure}
+            disabled={!savingsData || savingsData.isNotWorthIt}
+            className={`px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 shadow-sm border-none cursor-pointer active:scale-95 ${
+              !savingsData || savingsData.isNotWorthIt ? 'bg-slate-300 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'
+            }`}
+          >
+            <Check size={16} /> {t('save_measure')}
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-6">
         
         {/* SECTION 1: Input Parameters */}
-        <div className="space-y-4">
-          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
-            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">1</span> 
-            {t('parameters')} & {t('measures')}
-          </h3>
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-accent/50 group-hover:bg-accent transition-colors"></div>
+          <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2">
+            <Settings size={16} className="text-muted" /> {t('parameters')} & {t('measures')}
+          </h4>
           
-          <div className="bg-surface border border-border p-5 rounded-xl space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-muted mb-1">ประเภทมาตรการ (Category)</label>
                 <select name="category" value={params.category} onChange={handleChange} className="w-full p-2.5 bg-bg border border-border rounded-md text-sm outline-none focus:border-accent font-semibold">
@@ -157,11 +188,11 @@ export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
         </div>
 
         {/* SECTION 2: Real-time Results */}
-        <div className="space-y-4">
-          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
-            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">2</span> 
-            {t('results')} & Savings
-          </h3>
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50 group-hover:bg-emerald-500 transition-colors"></div>
+          <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2">
+            <Activity size={16} className="text-muted" /> {t('results')} & Savings
+          </h4>
           
           {savingsData ? (
             <div className={`p-5 border rounded-xl mt-4 flex flex-wrap justify-between items-center gap-4 ${savingsData.isNotWorthIt ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-100'}`}>
@@ -210,18 +241,8 @@ export default function GeneralCalcModal({ isOpen, onClose, equipment }) {
               <AlertTriangle size={18} /> กรุณากรอกข้อมูลให้ครบถ้วนเพื่อคำนวณผลประหยัด
             </div>
           )}
-          
-          <div className="flex justify-end pt-4 mt-4">
-            <button 
-              onClick={saveMeasure} 
-              disabled={!savingsData}
-              className={`px-6 py-2.5 text-white font-medium rounded-md transition-colors flex items-center gap-2 shadow-sm border-none cursor-pointer ${savingsData?.isNotWorthIt ? 'bg-slate-400' : 'bg-emerald-600 hover:bg-emerald-700'}`}
-            >
-              {t('save_measure')} <Check size={16} />
-            </button>
-          </div>
         </div>
       </div>
-    </ModalWrapper>
+    </div>
   );
 }

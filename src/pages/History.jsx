@@ -3,7 +3,7 @@ import { AppContext } from '../context/AppContext';
 import { Search, Eye, Trash2, Clock, History as HistoryIcon, Filter, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 
 export default function History() {
-  const { data, setData, t, lang } = useContext(AppContext);
+  const { data, setData, t, lang, user } = useContext(AppContext);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
   const [filterFact, setFilterFact] = useState('');
@@ -13,10 +13,33 @@ export default function History() {
 
   const factories = [...new Set(data.equipments.map(e => e.factory).filter(Boolean))];
 
+  const allHistoryItems = useMemo(() => {
+    const legacyInspections = data.inspections.map(i => ({ ...i, type: 'inspection' }));
+    
+    const equipmentComments = [];
+    data.equipments.forEach(eq => {
+      if (eq.comments && eq.comments.length > 0) {
+        eq.comments.forEach(c => {
+          equipmentComments.push({
+            id: 'comment_' + c.id,
+            eqId: eq.id,
+            catId: eq.catId,
+            date: c.date,
+            summary: c.text,
+            type: 'comment',
+            originalCommentId: c.id
+          });
+        });
+      }
+    });
+
+    return [...legacyInspections, ...equipmentComments];
+  }, [data.inspections, data.equipments]);
+
   const availableYears = useMemo(() => {
-    const years = [...new Set(data.inspections.map(i => i.date ? new Date(i.date).getFullYear() : null).filter(Boolean))].sort((a,b) => b-a);
+    const years = [...new Set(allHistoryItems.map(i => i.date ? new Date(i.date).getFullYear() : null).filter(Boolean))].sort((a,b) => b-a);
     return years;
-  }, [data.inspections]);
+  }, [allHistoryItems]);
 
   const MONTHS = [
     {v:'1',l:'ม.ค.'},{v:'2',l:'ก.พ.'},{v:'3',l:'มี.ค.'},{v:'4',l:'เม.ย.'},
@@ -25,13 +48,24 @@ export default function History() {
   ];
 
   const handleDelete = (id) => {
-    if (confirm('Are you sure you want to delete this inspection?')) {
-      setData({ ...data, inspections: data.inspections.filter(i => i.id !== id) });
+    if (confirm('Are you sure you want to delete this history item?')) {
+      if (id.startsWith('comment_')) {
+        const commentId = id.replace('comment_', '');
+        const newEqs = data.equipments.map(eq => {
+          if (eq.comments && eq.comments.some(c => c.id === commentId)) {
+            return { ...eq, comments: eq.comments.filter(c => c.id !== commentId) };
+          }
+          return eq;
+        });
+        setData({ ...data, equipments: newEqs });
+      } else {
+        setData({ ...data, inspections: data.inspections.filter(i => i.id !== id) });
+      }
     }
   };
 
   const inspections = useMemo(() => {
-    return data.inspections.filter(i => {
+    return allHistoryItems.filter(i => {
       if (filterCat && i.catId !== filterCat) return false;
       const eq = data.equipments.find(e => e.id === i.eqId);
       if (filterFact && (!eq || eq.factory !== filterFact)) return false;
@@ -43,7 +77,7 @@ export default function History() {
       }
       return true;
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [data.inspections, data.equipments, search, filterCat, filterFact, filterYear, filterMonth]);
+  }, [allHistoryItems, data.equipments, search, filterCat, filterFact, filterYear, filterMonth]);
 
   const hasFilters = search || filterCat || filterFact || filterMonth || filterYear;
   const clearFilters = () => { setSearch(''); setFilterCat(''); setFilterFact(''); setFilterMonth(''); setFilterYear(''); };
@@ -153,12 +187,14 @@ export default function History() {
                           >
                             {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                           </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); handleDelete(i.id); }}
-                            className="p-2 text-bad hover:text-bad rounded-lg hover:bg-red-500/10 transition-all cursor-pointer border-none bg-transparent active:scale-90"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          {user?.role === 'admin' && (
+                            <button
+                              onClick={e => { e.stopPropagation(); handleDelete(i.id); }}
+                              className="p-2 text-bad hover:text-bad rounded-lg hover:bg-red-500/10 transition-all cursor-pointer border-none bg-transparent active:scale-90"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

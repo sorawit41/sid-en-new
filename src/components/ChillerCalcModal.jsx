@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { ModalWrapper } from './Modals';
-import { ArrowRight, ArrowLeft, Check, Lightbulb, Settings, Zap, Droplets, ThermometerSnowflake, AlertTriangle, Camera, X } from 'lucide-react';
+import { ArrowLeft, Check, Settings, Zap, Droplets, ThermometerSnowflake, AlertTriangle, Camera, X, Lightbulb } from 'lucide-react';
+
 import { AppContext } from '../context/AppContext';
 import { MEASURE_TYPES } from '../context/AppContext';
 
@@ -41,10 +41,10 @@ const MEASURES = [
 ];
 
 const RECOMMENDED_CHILLERS = [
-  { id: 'c1', brand: 'Trane', model: 'CVHE Centrifugal', kw_tr: 0.55, desc: 'High Efficiency Water Cooled' },
-  { id: 'c2', brand: 'Carrier', model: '19DV Centrifugal', kw_tr: 0.52, desc: 'Ultra High Efficiency' },
-  { id: 'c3', brand: 'Daikin', model: 'Magnitude Magnetic', kw_tr: 0.48, desc: 'Magnetic Bearing Oil-Free' },
-  { id: 'c4', brand: 'York', model: 'YMC2 Magnetic', kw_tr: 0.49, desc: 'Magnetic Bearing VSD' }
+  { id: 'rec_ch_1', brand: 'Daikin', model: 'Magnitude WZH', spec: '0.48 kW/TR (COP 7.3)', costEst: 4500000, efficiency: 0.48, desc: 'คุ้มค่าพลังงานดีที่สุด (Best Savings)' },
+  { id: 'rec_ch_2', brand: 'York', model: 'YMC2 Centrifugal', spec: '0.49 kW/TR (COP 7.2)', costEst: 4200000, efficiency: 0.49, desc: 'คืนทุนเร็วที่สุด (Best Payback)' },
+  { id: 'rec_ch_3', brand: 'Carrier', model: '19DV AquaEdge', spec: '0.52 kW/TR (COP 6.8)', costEst: 3800000, efficiency: 0.52, desc: 'สมดุลประสิทธิภาพและราคา' },
+  { id: 'rec_ch_4', brand: 'Trane', model: 'CVHE CenTraVac', spec: '0.55 kW/TR (COP 6.4)', costEst: 3200000, efficiency: 0.55, desc: 'ประหยัดงบลงทุน (Budget Option)' }
 ];
 
 const iconMap = {
@@ -67,6 +67,7 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
   });
 
   const [selectedMeasure, setSelectedMeasure] = useState(null);
+  const [maxBudget, setMaxBudget] = useState(5000000); // Default max budget 5,000,000 Baht
   const [measureData, setMeasureData] = useState({
     pctReduction: 20,
     targetKwTr: 0.55,
@@ -219,15 +220,43 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
   if (!isOpen) return null;
 
   return (
-    <ModalWrapper isOpen={isOpen} onClose={onClose} title={`Chiller Calculator - ${equipment?.tag || 'New'}`} maxWidth="800px">
-      <div className="flex flex-col gap-8 h-[70vh] overflow-y-auto pr-2 pb-6">
+    <div className="animate-fade-in max-w-4xl mx-auto space-y-6 pb-20 pt-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
+        <div>
+          <h2 className="text-xl font-bold text-text">Chiller Calculator — {equipment?.tag || 'New'}</h2>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="text-sm text-muted">{equipment?.factory || ''}</span>
+            {equipment?.brand && <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded text-xs font-medium">{equipment.brand} {equipment.model}</span>}
+            {equipment?.kw && <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded text-xs font-medium">{equipment.kw} kW</span>}
+            {equipment?.capacity && <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded text-xs font-medium">{equipment.capacity} TR</span>}
+            {equipment?.opHoursYear && <span className="px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-600 rounded text-xs font-medium">{equipment.opHoursYear} hrs/yr</span>}
+            {equipment?.efficiency && <span className="px-2 py-0.5 bg-purple-50 border border-purple-100 text-purple-600 rounded text-xs font-medium">{equipment.efficiency} kW/TR</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5 bg-surface text-text cursor-pointer">
+            <ArrowLeft size={16} /> {t('cancel')}
+          </button>
+          {selectedMeasure && savingsData && !savingsData.isNotWorthIt && (
+            <button
+              onClick={saveMeasure}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 shadow-sm border-none cursor-pointer active:scale-95"
+            >
+              <Check size={16} /> {t('save_measure')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-6">
         
         {/* SECTION 1: Input Parameters */}
-        <div className="space-y-4">
-          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
-            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">1</span> 
-            {t('parameters')}
-          </h3>
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-accent/50 group-hover:bg-accent transition-colors"></div>
+          <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2">
+            <Settings size={16} className="text-muted" /> {t('parameters')}
+          </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -327,11 +356,11 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
         </div>
 
         {/* SECTION 2: Real-time Results */}
-        <div className="space-y-4">
-          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
-            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">2</span> 
-            {t('results')}
-          </h3>
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50 group-hover:bg-emerald-500 transition-colors"></div>
+          <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2">
+            <Zap size={16} className="text-muted" /> {t('results')}
+          </h4>
           
           {calcResult ? (
             <div className="animate-fade-in space-y-4">
@@ -386,13 +415,13 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
         </div>
 
         {/* SECTION 3: Measures & Savings */}
-        <div className="space-y-4">
-          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
-            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">3</span> 
-            {t('measures')} & Savings
-          </h3>
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/50 group-hover:bg-blue-500 transition-colors"></div>
+          <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2">
+            <Lightbulb size={16} className="text-muted" /> {t('measures')} & Savings
+          </h4>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
             {MEASURES.map(m => (
               <div 
                 key={m.id} 
@@ -416,25 +445,69 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
 
               {selectedMeasure.id === 'replace_chiller' && (
                 <div className="bg-slate-50 border border-border rounded-xl p-4 mb-4">
-                  <h5 className="text-xs font-semibold text-text mb-2 flex items-center gap-2">
-                    <Lightbulb size={14} className="text-accent" /> {t('chiller_recommend')}
-                  </h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {RECOMMENDED_CHILLERS.map(rc => (
-                      <div 
-                        key={rc.id} 
-                        onClick={() => selectRecommendation(rc)}
-                        className="bg-white border border-border rounded-lg p-2 cursor-pointer hover:border-accent hover:shadow-sm transition-all flex justify-between items-center group"
-                      >
-                        <div>
-                          <div className="text-[11px] font-bold text-text group-hover:text-accent transition-colors">{rc.brand} {rc.model}</div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="text-xs font-bold text-emerald-600 font-mono">{rc.kw_tr} <span className="text-[9px] text-muted">kW/TR</span></div>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <h5 className="text-xs font-semibold text-text flex items-center gap-2">
+                      <Lightbulb size={14} className="text-accent" /> {t('chiller_recommend')}
+                    </h5>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted font-bold">งบประมาณสูงสุด (บาท):</span>
+                      <input 
+                        type="number" 
+                        value={maxBudget} 
+                        onChange={(e) => setMaxBudget(parseFloat(e.target.value) || 0)} 
+                        className="w-32 px-2 py-1 bg-white border border-border rounded-lg text-xs font-bold outline-none text-accent"
+                      />
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {RECOMMENDED_CHILLERS.map(rc => {
+                      const isInBudget = rc.costEst <= maxBudget;
+                      const isBestSavings = rc.id === 'rec_ch_1';
+                      const isBestPayback = rc.id === 'rec_ch_2';
+
+                      return (
+                        <div 
+                          key={rc.id} 
+                          onClick={() => {
+                            selectRecommendation(rc);
+                            setMeasureData(p => ({ ...p, targetKwTr: rc.efficiency, investCost: rc.costEst }));
+                          }}
+                          className={`bg-white border rounded-xl p-3 cursor-pointer transition-all flex flex-col justify-between group ${
+                            isInBudget 
+                              ? 'border-border hover:border-accent hover:shadow-md' 
+                              : 'border-border/30 opacity-40 hover:opacity-75'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex justify-between items-start gap-1">
+                              <span className="text-[11px] font-bold text-text group-hover:text-accent transition-colors">{rc.brand} {rc.model}</span>
+                              <div className="flex flex-wrap gap-1">
+                                {isBestSavings && <span className="bg-emerald-500/10 text-emerald-600 text-[9px] font-bold px-1.5 py-0.5 rounded">Best Savings</span>}
+                                {isBestPayback && <span className="bg-blue-500/10 text-blue-600 text-[9px] font-bold px-1.5 py-0.5 rounded">Best Payback</span>}
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-muted mt-1">{rc.desc}</p>
+                          </div>
+
+                          <div className="flex justify-between items-center mt-3 pt-2 border-t border-border/40">
+                            <span className="text-[10px] font-bold text-slate-500 font-mono">{(rc.costEst).toLocaleString()} บาท</span>
+                            <span className="text-xs font-bold text-emerald-600 font-mono">{rc.efficiency} <span className="text-[9px] text-muted">kW/TR</span></span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Fallback Warning if budget is exceeded */}
+                  {RECOMMENDED_CHILLERS.every(rc => rc.costEst > maxBudget) && (
+                    <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2">
+                      <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
+                      <div className="text-[10px] text-amber-700 leading-relaxed">
+                        <strong>งบประมาณไม่เพียงพอสำหรับซื้อเครื่องจักรใหม่:</strong> แนะนำให้เลือกใช้มาตรการประเภทปรับปรุง/ดูแลรักษา (Housekeeping) เช่น <strong>"ล้าง Tube Condenser"</strong> หรือ <strong>"ปรับเพิ่มอุณหภูมิน้ำเย็น"</strong> แทน เนื่องจากประหยัดพลังงานได้โดยใช้เงินลงทุนน้อยมากหรือไม่มีเลย
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -532,7 +605,7 @@ export default function ChillerCalcModal({ isOpen, onClose, equipment }) {
           )}
         </div>
       </div>
-    </ModalWrapper>
+    </div>
   );
 }
 

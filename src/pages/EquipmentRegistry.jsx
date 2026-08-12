@@ -1,7 +1,7 @@
 import React, { useContext, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
-import { Search, Plus, Settings, Edit, Trash2, Calculator, Snowflake, Wind, Droplets, Flame, Factory as FactoryIcon, Zap, LayoutGrid } from 'lucide-react';
+import { Search, Plus, Settings, Edit, Trash2, Calculator, Snowflake, Wind, Droplets, Flame, Factory as FactoryIcon, Zap, LayoutGrid, ChevronDown, Check } from 'lucide-react';
 import CompressorCalcModal from '../components/CompressorCalcModal';
 import ChillerCalcModal from '../components/ChillerCalcModal';
 import GeneralCalcModal from '../components/GeneralCalcModal';
@@ -17,13 +17,14 @@ const iconMap = {
 };
 
 export default function EquipmentRegistry() {
-  const { data, setData, t, lang } = useContext(AppContext);
+  const { data, setData, t, lang, accessibleFactories, currentFactory, setCurrentFactory, user } = useContext(AppContext);
   const [searchParams, setSearchParams] = useSearchParams();
   const factoryParam = searchParams.get('factory');
 
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
   const [calcEq, setCalcEq] = useState(null);
+  const [factoryOpen, setFactoryOpen] = useState(false);
   
   // Dynamic sub-category filter when viewing a specific factory
   const [selectedSubCat, setSelectedSubCat] = useState('');
@@ -144,34 +145,138 @@ export default function EquipmentRegistry() {
     return categorySavingsBreakdown.reduce((a, b) => a + b.ghg, 0) || 1;
   }, [categorySavingsBreakdown]);
 
+  if (isAddOpen || editEq) {
+    return (
+      <AddEquipmentModal 
+        isOpen={true}
+        onClose={() => { setIsAddOpen(false); setEditEq(null); }}
+        equipment={editEq}
+        defaultFactory={factoryParam}
+      />
+    );
+  }
+
+  if (calcEq && calcEq.catId === 'chiller') {
+    return (
+      <ChillerCalcModal
+        isOpen={true}
+        onClose={() => setCalcEq(null)}
+        equipment={calcEq}
+      />
+    );
+  }
+
+  if (calcEq && calcEq.catId === 'compressor') {
+    return (
+      <CompressorCalcModal
+        isOpen={true}
+        onClose={() => setCalcEq(null)}
+        equipment={calcEq}
+      />
+    );
+  }
+
+  if (calcEq) {
+    return (
+      <GeneralCalcModal
+        isOpen={true}
+        onClose={() => setCalcEq(null)}
+        equipment={calcEq}
+      />
+    );
+  }
+
   return (
     <div className="animate-slide-up space-y-6 pb-12 select-none">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold text-text">
-            {t('equipment_registry')}
-          </h2>
-          <p className="text-xs md:text-sm text-muted mt-1">
-            {factoryParam ? `${t('factory')}: ${factoryParam}` : t('manage_equipments')}
-          </p>
-          {factoryParam && (
-            <div className="flex items-center gap-2 mt-2">
-              <button 
-                onClick={() => { setSearchParams({}); setSelectedSubCat(''); }} 
-                className="text-[10px] font-bold text-bad hover:underline bg-transparent border-none cursor-pointer p-0"
+        <div className="flex items-center gap-4 flex-wrap">
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold text-text">
+              {t('equipment_registry')}
+            </h2>
+            <p className="text-xs md:text-sm text-muted mt-1">
+              {t('manage_equipments')}
+            </p>
+          </div>
+
+          {/* Factory Selector Dropdown on the Header */}
+          {accessibleFactories.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setFactoryOpen(o => !o)}
+                className="flex items-center gap-2.5 px-4 py-2 bg-accent/10 hover:bg-accent/20 border border-accent/25 rounded-2xl text-xs font-bold text-accent transition-all cursor-pointer active:scale-95"
               >
-                ← {t('clear_filter')}
+                <FactoryIcon size={14} />
+                <span>
+                  {factoryParam 
+                    ? (accessibleFactories.find(f => f.name === factoryParam)?.name || factoryParam) 
+                    : (lang === 'th' ? 'เลือกโรงงาน' : 'Select Factory')}
+                </span>
+                <ChevronDown size={13} className={`transition-transform duration-200 ${factoryOpen ? 'rotate-180' : ''}`} />
               </button>
+
+              {factoryOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setFactoryOpen(false)} />
+                  <div className="absolute left-0 top-full mt-2 w-56 bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
+                    <div className="px-3 py-2 border-b border-border/50">
+                      <div className="text-[10px] font-bold text-muted uppercase tracking-wider">เลือกโรงงานที่ต้องการดู</div>
+                    </div>
+                    <div className="py-1">
+                      {/* All option */}
+                      <button
+                        onClick={() => {
+                          setSearchParams({});
+                          setCurrentFactory(null);
+                          setSelectedSubCat('');
+                          setFactoryOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs transition-all cursor-pointer border-none ${!factoryParam ? 'bg-accent/10 text-accent font-bold' : 'text-text hover:bg-card2 font-medium'}`}
+                      >
+                        <LayoutGrid size={13} className={!factoryParam ? 'text-accent' : 'text-muted'} />
+                        <span className="flex-1 truncate">{t('all_factories')}</span>
+                        {!factoryParam && <Check size={12} className="text-accent shrink-0" />}
+                      </button>
+
+                      {/* Accessible Factory items */}
+                      {accessibleFactories.map(f => {
+                        const isSel = factoryParam === f.name;
+                        return (
+                          <button
+                            key={f.id}
+                            onClick={() => {
+                              setSearchParams({ factory: f.name });
+                              setCurrentFactory(f.id);
+                              setSelectedSubCat('');
+                              setFactoryOpen(false);
+                            }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs transition-all cursor-pointer border-none ${isSel ? 'bg-accent/10 text-accent font-bold' : 'text-text hover:bg-card2 font-medium'}`}
+                          >
+                            <FactoryIcon size={13} className={isSel ? 'text-accent' : 'text-muted'} />
+                            <div className="flex-1 min-w-0">
+                              <div className="truncate">{f.name}</div>
+                              <div className="text-[10px] text-muted truncate">{f.location}</div>
+                            </div>
+                            {isSel && <Check size={12} className="text-accent shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
 
-        <button 
-          className="py-2.5 px-4 rounded-xl bg-accent hover:bg-accentHover text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-accent/15 active:scale-95 cursor-pointer border-none"
-          onClick={() => setIsAddOpen(true)}
-        >
-          <Plus size={14} /> {t('add_equipment')}
-        </button>
+        {user?.role === 'admin' && (
+          <button 
+            className="py-2.5 px-4 rounded-xl bg-accent hover:bg-accentHover text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-accent/15 active:scale-95 cursor-pointer border-none"
+            onClick={() => setIsAddOpen(true)}
+          >
+            <Plus size={14} /> {t('add_equipment')}
+          </button>
+        )}
       </div>
 
       {/* Factory Overview Dashboard Banner */}
@@ -334,7 +439,7 @@ export default function EquipmentRegistry() {
         <div className="grid gap-3.5 animate-fade-in">
           {equipments.map(e => {
             const cat = data.cats.find(c => c.id === e.catId) || { name: 'Unknown', icon: 'Settings' };
-            const ic = data.inspections.filter(i => i.eqId === e.id).length;
+            const ic = data.inspections.filter(i => i.eqId === e.id).length + (e.comments ? e.comments.length : 0);
             const mc = data.measures.filter(m => m.eqId === e.id).length;
             const IconComp = iconMap[cat.icon] || <Settings size={18} />;
 
@@ -358,6 +463,25 @@ export default function EquipmentRegistry() {
                     <div className="text-xs text-muted mt-0.5 font-medium">
                       {[e.brand, e.model].filter(Boolean).join(' · ') || t('no_brand_info')}
                     </div>
+                    
+                    {e.comments && e.comments.length > 0 && (
+                      <div className="text-[11px] text-muted mt-2 border-l-2 border-blue-400/50 pl-2 py-0.5 bg-blue-50/30 rounded-r-md max-w-xl">
+                        <span className="font-bold mr-1 text-slate-600">
+                          {new Date(e.comments[0].date).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}:
+                        </span> 
+                        <span className="italic line-clamp-1 inline-block align-bottom">{e.comments[0].text}</span>
+                      </div>
+                    )}
+                    
+                    {(e.createdBy || e.updatedBy) && (
+                      <div className="text-[10px] text-muted mt-1.5 flex flex-wrap gap-2">
+                        {e.updatedBy ? (
+                           <span className="bg-surface-alt px-2 py-0.5 rounded border border-border">{lang === 'th' ? 'แก้ไขล่าสุดโดย' : 'Updated by'}: <span className="font-bold text-text">{e.updatedBy}</span> {e.updatedAt && `(${new Date(e.updatedAt).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US')})`}</span>
+                        ) : (
+                           <span className="bg-surface-alt px-2 py-0.5 rounded border border-border">{lang === 'th' ? 'เพิ่มโดย' : 'Added by'}: <span className="font-bold text-text">{e.createdBy}</span> {e.createdAt && `(${new Date(e.createdAt).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US')})`}</span>
+                        )}
+                      </div>
+                    )}
                     
                     <div className="text-[10px] text-muted font-bold mt-2.5 flex gap-2 flex-wrap items-center">
                       {e.factory && (
@@ -386,20 +510,24 @@ export default function EquipmentRegistry() {
                   >
                     <Calculator size={15} />
                   </button>
-                  <button 
-                    className="p-2.5 rounded border border-border bg-surface text-slate-500 hover:text-accent hover:border-accent/40 hover:bg-accent/5 transition-all active:scale-90 cursor-pointer shadow-sm flex items-center justify-center" 
-                    title={t('edit_specification')}
-                    onClick={() => setEditEq(e)}
-                  >
-                    <Edit size={15} />
-                  </button>
-                  <button 
-                    className="p-2.5 rounded border border-border bg-surface text-slate-500 hover:text-bad hover:border-bad/40 hover:bg-red-500/10 transition-all active:scale-90 cursor-pointer shadow-sm flex items-center justify-center" 
-                    title={t('delete_equipment')}
-                    onClick={() => handleDelete(e.id)}
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {user?.role === 'admin' && (
+                    <button 
+                      className="p-2.5 rounded border border-border bg-surface text-slate-500 hover:text-accent hover:border-accent/40 hover:bg-accent/5 transition-all active:scale-90 cursor-pointer shadow-sm flex items-center justify-center" 
+                      title={t('edit_specification')}
+                      onClick={() => setEditEq(e)}
+                    >
+                      <Edit size={15} />
+                    </button>
+                  )}
+                  {user?.role === 'admin' && (
+                    <button 
+                      className="p-2.5 rounded border border-border bg-surface text-slate-500 hover:text-bad hover:border-bad/40 hover:bg-red-500/10 transition-all active:scale-90 cursor-pointer shadow-sm flex items-center justify-center" 
+                      title={t('delete_equipment')}
+                      onClick={() => handleDelete(e.id)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -420,7 +548,7 @@ export default function EquipmentRegistry() {
                 : (lang === 'th' ? 'เริ่มต้นด้วยการเพิ่มอุปกรณ์ชิ้นแรก' : 'Start by adding your first equipment')}
             </p>
           </div>
-          {!search && !filterCat && !selectedSubCat && (
+          {!search && !filterCat && !selectedSubCat && user?.role === 'admin' && (
             <button
               onClick={() => setIsAddOpen(true)}
               className="flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accentHover text-white text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer border-none shadow-sm"
@@ -439,38 +567,6 @@ export default function EquipmentRegistry() {
         </div>
       )}
 
-      {calcEq && calcEq.catId === 'compressor' && (
-        <CompressorCalcModal 
-          isOpen={!!calcEq} 
-          onClose={() => setCalcEq(null)} 
-          equipment={calcEq} 
-        />
-      )}
-      
-      {calcEq && calcEq.catId === 'chiller' && (
-        <ChillerCalcModal 
-          isOpen={!!calcEq} 
-          onClose={() => setCalcEq(null)} 
-          equipment={calcEq} 
-        />
-      )}
-
-      {calcEq && calcEq.catId !== 'chiller' && calcEq.catId !== 'compressor' && (
-        <GeneralCalcModal 
-          isOpen={!!calcEq} 
-          onClose={() => setCalcEq(null)} 
-          equipment={calcEq} 
-        />
-      )}
-
-      {/* Add / Edit Equipment Modal */}
-      {(isAddOpen || editEq) && (
-        <AddEquipmentModal 
-          isOpen={isAddOpen || !!editEq}
-          onClose={() => { setIsAddOpen(false); setEditEq(null); }}
-          equipment={editEq}
-        />
-      )}
     </div>
   );
 }

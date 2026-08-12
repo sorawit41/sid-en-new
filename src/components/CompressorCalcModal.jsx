@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { ModalWrapper } from './Modals';
-import { Zap, Target, ArrowRight, ArrowLeft, Check, Activity, Settings, Lightbulb, AlertTriangle } from 'lucide-react';
+import { Zap, ArrowLeft, Check, Activity, Settings, AlertTriangle, Target, Lightbulb } from 'lucide-react';
+
 import { AppContext } from '../context/AppContext';
 import { MEASURE_TYPES } from '../context/AppContext';
+
 
 // Color performance indicator for compressor
 const getSerStatus = (ser) => {
@@ -192,15 +193,43 @@ export default function CompressorCalcModal({ isOpen, onClose, equipment }) {
   if (!isOpen) return null;
 
   return (
-    <ModalWrapper isOpen={isOpen} onClose={onClose} title={`Compressor Calculator - ${equipment?.tag || 'New'}`} maxWidth="800px">
-      <div className="flex flex-col gap-8 h-[70vh] overflow-y-auto pr-2 pb-6">
+    <div className="animate-fade-in max-w-4xl mx-auto space-y-6 pb-20 pt-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
+        <div>
+          <h2 className="text-xl font-bold text-text">Compressor Calculator — {equipment?.tag || 'New'}</h2>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="text-sm text-muted">{equipment?.factory || ''}</span>
+            {equipment?.brand && <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded text-xs font-medium">{equipment.brand} {equipment.model}</span>}
+            {equipment?.kw && <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded text-xs font-medium">{equipment.kw} kW</span>}
+            {equipment?.capacity && <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded text-xs font-medium">{equipment.capacity} TR</span>}
+            {equipment?.opHoursYear && <span className="px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-600 rounded text-xs font-medium">{equipment.opHoursYear} hrs/yr</span>}
+            {equipment?.efficiency && <span className="px-2 py-0.5 bg-purple-50 border border-purple-100 text-purple-600 rounded text-xs font-medium">{equipment.efficiency} kW/TR</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-1.5 bg-surface text-text cursor-pointer">
+            <ArrowLeft size={16} /> {t('cancel')}
+          </button>
+          {selectedMeasure && savingsData && !savingsData.isNotWorthIt && (
+            <button
+              onClick={saveMeasure}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 shadow-sm border-none cursor-pointer active:scale-95"
+            >
+              <Check size={16} /> {t('save_measure')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-6">
         
         {/* SECTION 1: Input Parameters */}
-        <div className="space-y-4">
-          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
-            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">1</span> 
-            {t('parameters')}
-          </h3>
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-accent/50 group-hover:bg-accent transition-colors"></div>
+          <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2">
+            <Settings size={16} className="text-muted" /> {t('parameters')}
+          </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -267,11 +296,11 @@ export default function CompressorCalcModal({ isOpen, onClose, equipment }) {
         </div>
 
         {/* SECTION 2: Real-time Results */}
-        <div className="space-y-4">
-          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
-            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">2</span> 
-            {t('results')}
-          </h3>
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50 group-hover:bg-emerald-500 transition-colors"></div>
+          <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2">
+            <Zap size={16} className="text-muted" /> {t('results')}
+          </h4>
           
           {calcResult ? (
             <div className="animate-fade-in space-y-4">
@@ -293,11 +322,11 @@ export default function CompressorCalcModal({ isOpen, onClose, equipment }) {
         </div>
 
         {/* SECTION 3: Measures & Savings */}
-        <div className="space-y-4">
-          <h3 className="text-base font-bold text-text flex items-center gap-2 border-b border-border pb-2">
-            <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">3</span> 
-            {t('measures')} & Savings
-          </h3>
+        <div className="bg-surface border border-border p-6 rounded-xl space-y-4 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500/50 group-hover:bg-blue-500 transition-colors"></div>
+          <h4 className="text-sm font-bold text-text uppercase tracking-wider mb-2 border-b border-border pb-2 flex items-center gap-2">
+            <Lightbulb size={16} className="text-muted" /> {t('measures')} & Savings
+          </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
             {MEASURES.map(m => (
@@ -392,7 +421,7 @@ export default function CompressorCalcModal({ isOpen, onClose, equipment }) {
           )}
         </div>
       </div>
-    </ModalWrapper>
+    </div>
   );
 }
 

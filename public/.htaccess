@@ -1,0 +1,24 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Prevent loop for existing files, directories or symlinks
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Redirect all other requests to index.html
+  RewriteRule ^(.*)$ /index.html [L]
+</IfModule>
+
+# Force correct MIME types for Javascript and CSS modules
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|mjs)$">
+    AddType application/javascript .js .mjs
+    Header set Content-Type "application/javascript"
+  </FilesMatch>
+  <FilesMatch "\.(css)$">
+    AddType text/css .css
+    Header set Content-Type "text/css"
+  </FilesMatch>
+</IfModule>
